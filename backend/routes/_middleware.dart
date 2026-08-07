@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
 import 'package:inventy_backend/src/application/business_logo.dart';
+import 'package:inventy_backend/src/application/change_password.dart';
 import 'package:inventy_backend/src/application/create_product.dart';
 import 'package:inventy_backend/src/application/create_products_bulk.dart';
 import 'package:inventy_backend/src/application/create_user.dart';
@@ -210,6 +211,14 @@ Handler middleware(Handler handler) {
         provider<Future<DeleteUser>>(
           (_) async =>
               DeleteUser(PostgresUserRepository(await Database.connection())),
+        ),
+      )
+      .use(
+        provider<Future<ChangePassword>>(
+          (_) async => ChangePassword(
+            PostgresUserRepository(await Database.connection()),
+            PasswordHasher(),
+          ),
         ),
       )
       .use(_auth())

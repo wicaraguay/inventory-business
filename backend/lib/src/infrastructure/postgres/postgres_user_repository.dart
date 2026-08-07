@@ -63,6 +63,14 @@ class PostgresUserRepository implements UserRepository {
   }
 
   @override
+  Future<void> updatePassword(String id, String passwordHash) async {
+    await _db.execute(
+      Sql.named('UPDATE users SET password_hash = @h WHERE id = @id'),
+      parameters: {'h': passwordHash, 'id': id},
+    );
+  }
+
+  @override
   Future<int> count() async {
     final result = await _db.execute('SELECT count(*)::int FROM users');
     return result.first[0]! as int;

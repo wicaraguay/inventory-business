@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
+import 'package:inventy_app/features/auth/presentation/widgets/change_password_sheet.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/api/api_client.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
@@ -191,10 +192,36 @@ class _UserFooter extends ConsumerWidget {
             ],
           ),
         ),
-        IconButton(
-          tooltip: 'Cerrar sesión',
-          onPressed: () => ref.read(authProvider.notifier).logout(),
-          icon: const Icon(Icons.logout, color: AppColors.danger),
+        PopupMenuButton<String>(
+          tooltip: 'Mi cuenta',
+          icon: const Icon(Icons.more_vert, color: AppColors.onSurface),
+          onSelected: (action) {
+            if (action == 'password') {
+              showModalBottomSheet<void>(
+                context: context,
+                isScrollControlled: true,
+                builder: (_) => const ChangePasswordSheet(),
+              );
+            } else {
+              ref.read(authProvider.notifier).logout();
+            }
+          },
+          itemBuilder: (_) => const [
+            PopupMenuItem(
+              value: 'password',
+              child: ListTile(
+                leading: Icon(Icons.lock_outline),
+                title: Text('Cambiar contraseña'),
+              ),
+            ),
+            PopupMenuItem(
+              value: 'logout',
+              child: ListTile(
+                leading: Icon(Icons.logout, color: AppColors.danger),
+                title: Text('Cerrar sesión'),
+              ),
+            ),
+          ],
         ),
       ],
     );

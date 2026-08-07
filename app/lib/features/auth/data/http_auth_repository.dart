@@ -30,4 +30,12 @@ class HttpAuthRepository {
       return null;
     }
   }
+
+  /// Changes the logged-in user's own password.
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    await _dio.post<Map<String, dynamic>>(
+      '/auth/change-password',
+      data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+    );
+  }
 }

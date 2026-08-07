@@ -65,6 +65,20 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// Changes the current user's password; throws with a friendly message.
+  Future<void> changePassword(String current, String newPassword) async {
+    try {
+      await ref
+          .read(authRepositoryProvider)
+          .changePassword(current, newPassword);
+    } on DioException catch (e) {
+      final msg = e.response?.data is Map
+          ? (e.response!.data as Map)['error'] as String?
+          : null;
+      throw Exception(msg ?? 'No se pudo cambiar la contraseña. Revisá la conexión.');
+    }
+  }
+
   Future<void> logout() async {
     authToken = null;
     final prefs = ref.read(sharedPreferencesProvider);
