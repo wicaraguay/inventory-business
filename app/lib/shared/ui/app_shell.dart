@@ -13,6 +13,7 @@ typedef NavItem = ({IconData icon, String label, String path, bool ownerOnly});
 const navItems = <NavItem>[
   (icon: Icons.dashboard_outlined, label: 'Dashboard', path: '/dashboard', ownerOnly: true),
   (icon: Icons.inventory_2_outlined, label: 'Inventario', path: '/inventory', ownerOnly: false),
+  (icon: Icons.sell_outlined, label: 'Precio', path: '/price', ownerOnly: false),
   (icon: Icons.point_of_sale_outlined, label: 'Ventas', path: '/sales', ownerOnly: true),
   (icon: Icons.swap_vert, label: 'Movimientos', path: '/movements', ownerOnly: true),
   (icon: Icons.people_outline, label: 'Usuarios', path: '/users', ownerOnly: true),

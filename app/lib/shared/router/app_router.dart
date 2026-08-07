@@ -7,6 +7,7 @@ import 'package:inventy_app/features/dashboard/presentation/dashboard_screen.dar
 import 'package:inventy_app/features/movements/presentation/movements_screen.dart';
 import 'package:inventy_app/features/products/presentation/products_screen.dart';
 import 'package:inventy_app/features/sales/presentation/sales_screen.dart';
+import 'package:inventy_app/features/scanning/presentation/price_check_screen.dart';
 import 'package:inventy_app/features/scanning/presentation/scan_screen.dart';
 import 'package:inventy_app/features/settings/presentation/settings_screen.dart';
 import 'package:inventy_app/features/users/presentation/users_screen.dart';
@@ -61,6 +62,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const ProductsScreen(),
           ),
           GoRoute(path: '/scan', builder: (_, __) => const ScanScreen()),
+          GoRoute(
+            path: '/price',
+            builder: (_, __) => const PriceCheckScreen(),
+          ),
           GoRoute(path: '/sales', builder: (_, __) => const SalesScreen()),
           GoRoute(
             path: '/movements',
