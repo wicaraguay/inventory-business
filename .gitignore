@@ -1,0 +1,28 @@
+# Secrets
+.env
+
+# Dart / Dart Frog
+.dart_tool/
+.packages
+build/
+pubspec.lock
+
+# Flutter
+app/.dart_tool/
+app/build/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+
+# dbmate generated schema (regenerated from migrations)
+db/schema.sql
+
+# Caddy local state
+caddy_data/
+
+# Claude / agent tooling (not part of the project)
+.claude/
+.atl/
+
+# OS / editor
+.DS_Store
+Thumbs.db

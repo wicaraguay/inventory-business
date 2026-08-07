@@ -1,0 +1,182 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
+import 'package:inventy_app/shared/theme/app_colors.dart';
+
+/// Container: Configuración — only what the app really has (honest settings).
+class SettingsScreen extends ConsumerStatefulWidget {
+  const SettingsScreen({super.key});
+
+  @override
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  late final TextEditingController _name;
+  late final TextEditingController _threshold;
+
+  @override
+  void initState() {
+    super.initState();
+    final settings = ref.read(settingsProvider);
+    _name = TextEditingController(text: settings.businessName);
+    _threshold = TextEditingController(text: '${settings.defaultThreshold}');
+  }
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _threshold.dispose();
+    super.dispose();
+  }
+
+  Future<void> _saveName() async {
+    try {
+      await ref.read(settingsProvider.notifier).setBusinessName(_name.text);
+      if (mounted) _snack('Nombre del negocio guardado');
+    } on Object {
+      if (mounted) {
+        _snack('No se pudo guardar (revisá la conexión al servidor)');
+      }
+    }
+  }
+
+  Future<void> _saveThreshold() async {
+    final n = int.tryParse(_threshold.text.trim());
+    if (n == null || n < 0) {
+      _snack('Ingresá un número válido (>= 0)');
+      return;
+    }
+    try {
+      await ref.read(settingsProvider.notifier).setDefaultThreshold(n);
+      if (mounted) _snack('Umbral por defecto guardado');
+    } on Object {
+      if (mounted) {
+        _snack('No se pudo guardar (revisá la conexión al servidor)');
+      }
+    }
+  }
+
+  void _snack(String m) =>
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: ListView(
+        children: [
+          Text('Configuración',
+              style: Theme.of(context).textTheme.headlineLarge),
+          const SizedBox(height: 4),
+          Text(
+            'Ajustes de tu negocio',
+            style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
+          ),
+          const SizedBox(height: 24),
+          _SettingsCard(
+            title: 'Datos del negocio',
+            children: [
+              TextField(
+                controller: _name,
+                decoration:
+                    const InputDecoration(labelText: 'Nombre del negocio'),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Aparece en la barra lateral.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                    onPressed: () {
+                      _saveName();
+                    },
+                    child: const Text('Guardar')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'Preferencias',
+            children: [
+              TextField(
+                controller: _threshold,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Umbral de stock bajo por defecto',
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Se usa como valor inicial al crear un producto nuevo.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                    onPressed: () {
+                      _saveThreshold();
+                    },
+                    child: const Text('Guardar')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'Notificaciones',
+            children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Alertas de stock bajo'),
+                subtitle: const Text('Activadas dentro de la app'),
+                value: true,
+                onChanged: null,
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Avisos por WhatsApp'),
+                subtitle: const Text('Próximamente'),
+                value: false,
+                onChanged: null,
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsCard extends StatelessWidget {
+  const _SettingsCard({required this.title, required this.children});
+
+  final String title;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(title, style: Theme.of(context).textTheme.headlineMedium),
+            const SizedBox(height: 12),
+            ...children,
+          ],
+        ),
+      ),
+    );
+  }
+}

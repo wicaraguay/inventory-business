@@ -1,0 +1,39 @@
+import 'dart:typed_data';
+
+import 'package:inventy_app/features/products/domain/bulk_product_input.dart';
+import 'package:inventy_app/features/products/domain/product.dart';
+
+abstract interface class ProductRepository {
+  Future<List<Product>> list();
+
+  Future<Product> create({
+    required String name,
+    required String sku,
+    required int lowStockThreshold,
+    String? detail,
+    double? salePrice,
+    double? minPrice,
+  });
+
+  /// Creates many products at once (all sizes of a model), each with its
+  /// initial stock. Returns the created products (with ids) for label printing.
+  Future<List<Product>> createBulk(List<BulkProductInput> items);
+
+  Future<void> update({
+    required String id,
+    required String name,
+    required String sku,
+    required int lowStockThreshold,
+    String? detail,
+    double? salePrice,
+    double? minPrice,
+  });
+
+  Future<void> delete(String id);
+
+  /// Uploads (or replaces) a product's image with the given (compressed) bytes.
+  Future<void> uploadImage(String id, Uint8List bytes);
+
+  /// Removes a product's image.
+  Future<void> deleteImage(String id);
+}

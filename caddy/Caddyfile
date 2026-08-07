@@ -1,0 +1,9 @@
+# Local HTTPS so the web camera (mobile_scanner) works in dev.
+# Caddy issues an internal cert for *.localhost automatically.
+{
+	local_certs
+}
+
+inventy.localhost {
+	reverse_proxy backend:8080
+}
