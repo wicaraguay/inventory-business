@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/labels/data/label_printer.dart';
+import 'package:inventy_app/features/scanning/presentation/identify_screen.dart';
 import 'package:inventy_app/features/labels/presentation/label_sheet.dart';
 import 'package:inventy_app/features/movements/domain/movement_repository.dart';
 import 'package:inventy_app/features/movements/presentation/movements_providers.dart';
@@ -37,6 +38,9 @@ class ProductsScreen extends ConsumerWidget {
             onCreate: () => _openCreate(context, ref),
             onBulkCreate: () => _openBulkCreate(context, ref),
             onPrintAll: () => _printAll(context, ref),
+            onIdentify: () => Navigator.of(context).push(
+              MaterialPageRoute<void>(builder: (_) => const IdentifyScreen()),
+            ),
           ),
           const SizedBox(height: 16),
           Expanded(
@@ -139,9 +143,10 @@ class ProductsScreen extends ConsumerWidget {
       }
       // Print all the new labels in one PDF (one QR per size).
       if (context.mounted) {
-        final columns = await _askLabelColumns(context);
-        if (columns != null) {
-          await printProductLabels(created, columns: columns);
+        final opts = await _askLabelOptions(context);
+        if (opts != null) {
+          await printProductLabels(created,
+              columns: opts.columns, showText: opts.withText);
         }
       }
     } on Exception catch (e) {
@@ -185,24 +190,50 @@ class ProductsScreen extends ConsumerWidget {
   Future<void> _printAll(BuildContext context, WidgetRef ref) async {
     final products = ref.read(productsProvider).asData?.value ?? const [];
     if (products.isEmpty) return;
-    final columns = await _askLabelColumns(context);
-    if (columns == null) return;
-    await printProductLabels(products, columns: columns);
+    final opts = await _askLabelOptions(context);
+    if (opts == null) return;
+    await printProductLabels(products,
+        columns: opts.columns, showText: opts.withText);
   }
 
-  /// Ask how many label columns per A4 sheet (more columns → smaller labels).
-  Future<int?> _askLabelColumns(BuildContext context) {
-    return showDialog<int>(
+  /// Ask the label format: how many columns per A4 sheet, and whether to include
+  /// the product data (off by default → QR-only labels).
+  Future<({int columns, bool withText})?> _askLabelOptions(
+    BuildContext context,
+  ) {
+    var withText = false;
+    return showDialog<({int columns, bool withText})>(
       context: context,
-      builder: (ctx) => SimpleDialog(
-        title: const Text('¿Cuántas columnas por hoja?'),
-        children: [
-          for (var c = 2; c <= maxLabelColumns; c++)
-            SimpleDialogOption(
-              onPressed: () => Navigator.of(ctx).pop(c),
-              child: Text('$c columnas   ·   ~${c * 9} etiquetas por hoja'),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setState) => SimpleDialog(
+          title: const Text('Imprimir etiquetas'),
+          children: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              child: CheckboxListTile(
+                contentPadding: EdgeInsets.zero,
+                value: withText,
+                onChanged: (v) => setState(() => withText = v ?? false),
+                title: const Text('Incluir nombre y talla'),
+                subtitle: const Text('Por defecto: solo el QR'),
+              ),
             ),
-        ],
+            const Divider(height: 1),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
+              child: Text(
+                '¿Cuántas columnas por hoja?',
+                style: Theme.of(ctx).textTheme.labelLarge,
+              ),
+            ),
+            for (var c = 2; c <= maxLabelColumns; c++)
+              SimpleDialogOption(
+                onPressed: () => Navigator.of(ctx)
+                    .pop((columns: c, withText: withText)),
+                child: Text('$c columnas   ·   ~${c * 9} etiquetas por hoja'),
+              ),
+          ],
+        ),
       ),
     );
   }
@@ -298,6 +329,7 @@ class _Header extends StatelessWidget {
     required this.onCreate,
     required this.onBulkCreate,
     required this.onPrintAll,
+    required this.onIdentify,
   });
 
   final int? count;
@@ -305,6 +337,7 @@ class _Header extends StatelessWidget {
   final VoidCallback onCreate;
   final VoidCallback onBulkCreate;
   final VoidCallback onPrintAll;
+  final VoidCallback onIdentify;
 
   @override
   Widget build(BuildContext context) {
@@ -338,9 +371,12 @@ class _Header extends StatelessWidget {
       icon: const Icon(Icons.qr_code_2),
       label: const Text('Imprimir etiquetas'),
     );
-
-    // Employees get a read-only inventory: just the title, no action buttons.
-    if (!owner) return titleBlock;
+    // Available to everyone: scan a printed QR to see which shoe/size it is.
+    final identify = OutlinedButton.icon(
+      onPressed: onIdentify,
+      icon: const Icon(Icons.qr_code_scanner),
+      label: const Text('Identificar QR'),
+    );
 
     return LayoutBuilder(
       builder: (context, c) {
@@ -352,11 +388,15 @@ class _Header extends StatelessWidget {
             children: [
               titleBlock,
               const SizedBox(height: 16),
-              SizedBox(height: 48, child: newProduct),
-              const SizedBox(height: 8),
-              SizedBox(height: 44, child: bulk),
-              const SizedBox(height: 8),
-              SizedBox(height: 44, child: printAll),
+              if (owner) ...[
+                SizedBox(height: 48, child: newProduct),
+                const SizedBox(height: 8),
+                SizedBox(height: 44, child: bulk),
+                const SizedBox(height: 8),
+                SizedBox(height: 44, child: printAll),
+                const SizedBox(height: 8),
+              ],
+              SizedBox(height: 44, child: identify),
             ],
           );
         }
@@ -372,7 +412,10 @@ class _Header extends StatelessWidget {
                 runSpacing: 8,
                 alignment: WrapAlignment.end,
                 crossAxisAlignment: WrapCrossAlignment.center,
-                children: [printAll, bulk, newProduct],
+                children: [
+                  identify,
+                  if (owner) ...[printAll, bulk, newProduct],
+                ],
               ),
             ),
           ],

@@ -11,17 +11,24 @@ const _mm = PdfPageFormat.mm;
 /// gets too small to scan comfortably.
 const maxLabelColumns = 5;
 
-/// One product label: QR encoding the SKU + name / detail / sku as text.
-pw.Widget _labelBody(Product product, {double qrSizeMm = 20}) {
+/// One product label. By default it's JUST the QR (encoding the SKU), centered.
+/// With [showText] the name / detail / sku are printed beside it.
+pw.Widget _labelBody(
+  Product product, {
+  double qrSizeMm = 20,
+  bool showText = false,
+}) {
+  final qr = pw.BarcodeWidget(
+    barcode: pw.Barcode.qrCode(),
+    data: product.sku,
+    width: qrSizeMm * _mm,
+    height: qrSizeMm * _mm,
+  );
+  if (!showText) return pw.Center(child: qr);
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.center,
     children: [
-      pw.BarcodeWidget(
-        barcode: pw.Barcode.qrCode(),
-        data: product.sku,
-        width: qrSizeMm * _mm,
-        height: qrSizeMm * _mm,
-      ),
+      qr,
       pw.SizedBox(width: 1.5 * _mm),
       pw.Expanded(
         child: pw.Column(
@@ -54,11 +61,12 @@ pw.Widget _labelBody(Product product, {double qrSizeMm = 20}) {
   );
 }
 
-/// Print a single product's label (small page).
+/// Print a single product's label (small page). QR-only by default.
 Future<void> printProductLabel({
   required String name,
   required String sku,
   String? detail,
+  bool showText = false,
 }) async {
   final doc = pw.Document();
   doc.addPage(
@@ -66,6 +74,8 @@ Future<void> printProductLabel({
       pageFormat: PdfPageFormat(50 * _mm, 30 * _mm, marginAll: 2 * _mm),
       build: (context) => _labelBody(
         Product(id: '', name: name, sku: sku, detail: detail),
+        qrSizeMm: showText ? 20 : 24,
+        showText: showText,
       ),
     ),
   );
@@ -79,6 +89,7 @@ Future<void> printProductLabel({
 Future<void> printProductLabels(
   List<Product> products, {
   int columns = 3,
+  bool showText = false,
 }) async {
   final doc = pw.Document();
 
@@ -97,10 +108,11 @@ Future<void> printProductLabels(
   final rowsPerPage = ((usableHeightMm + gapMm) / (cellHeightMm + gapMm)).floor();
   final perPage = cols * rowsPerPage;
 
-  // QR stays between 12mm and 20mm — small enough for 5 columns, big enough
-  // to scan from a phone.
-  final qrSizeMm =
-      math.min(cellHeightMm - 4, cellWidthMm * 0.45).clamp(12.0, 20.0);
+  // QR size: with text it shares the cell (0.45 width); QR-only can use most of
+  // the cell so it stays big and easy to scan even at 5 columns.
+  final qrSizeMm = showText
+      ? math.min(cellHeightMm - 4, cellWidthMm * 0.45).clamp(12.0, 20.0)
+      : math.min(cellHeightMm - 3, cellWidthMm * 0.9).clamp(14.0, 24.0);
 
   pw.Widget cell(Product p) => pw.Container(
         width: cellWidthMm * _mm,
@@ -109,7 +121,7 @@ Future<void> printProductLabels(
         decoration: pw.BoxDecoration(
           border: pw.Border.all(width: 0.5, color: PdfColors.grey400),
         ),
-        child: _labelBody(p, qrSizeMm: qrSizeMm),
+        child: _labelBody(p, qrSizeMm: qrSizeMm, showText: showText),
       );
 
   for (var i = 0; i < products.length; i += perPage) {
