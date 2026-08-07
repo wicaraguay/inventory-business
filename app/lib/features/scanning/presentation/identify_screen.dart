@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/scanning/presentation/scanning_providers.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
+import 'package:inventy_app/shared/ui/product_image.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 /// Full-screen QR identifier for the labeling workflow: scan a printed QR and it
@@ -127,6 +128,11 @@ class _IdentifyScreenState extends ConsumerState<IdentifyScreen> {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          // Show the product photo if it has one (tap to enlarge).
+          if (p.hasImage) ...[
+            Center(child: ProductThumbnail(product: p, size: 96)),
+            const SizedBox(height: 10),
+          ],
           Text(
             p.name,
             textAlign: TextAlign.center,
