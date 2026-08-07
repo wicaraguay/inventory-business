@@ -11,6 +11,7 @@ import 'package:inventy_app/features/products/presentation/products_providers.da
 import 'package:inventy_app/features/products/presentation/widgets/bulk_create_sheet.dart';
 import 'package:inventy_app/features/products/presentation/widgets/create_product_sheet.dart';
 import 'package:inventy_app/features/products/presentation/widgets/product_table.dart';
+import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/api/api_client.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
@@ -23,6 +24,7 @@ class ProductsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final products = ref.watch(productsProvider);
+    final isOwner = ref.watch(currentUserProvider)?.isOwner ?? false;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -30,6 +32,7 @@ class ProductsScreen extends ConsumerWidget {
         children: [
           _Header(
             count: products.asData?.value.length,
+            owner: isOwner,
             onCreate: () => _openCreate(context, ref),
             onBulkCreate: () => _openBulkCreate(context, ref),
             onPrintAll: () => _printAll(context, ref),
@@ -38,9 +41,10 @@ class ProductsScreen extends ConsumerWidget {
           Expanded(
             child: products.when(
               data: (items) => items.isEmpty
-                  ? const _Empty()
+                  ? _Empty(canCreate: isOwner)
                   : ProductTable(
                       products: items,
+                      readOnly: !isOwner,
                       onMovement: (product, isEntry) =>
                           _openMovement(context, ref, product, isEntry),
                       onLabel: (product) => _openLabel(context, product),
@@ -289,12 +293,14 @@ class ProductsScreen extends ConsumerWidget {
 class _Header extends StatelessWidget {
   const _Header({
     required this.count,
+    required this.owner,
     required this.onCreate,
     required this.onBulkCreate,
     required this.onPrintAll,
   });
 
   final int? count;
+  final bool owner;
   final VoidCallback onCreate;
   final VoidCallback onBulkCreate;
   final VoidCallback onPrintAll;
@@ -331,6 +337,9 @@ class _Header extends StatelessWidget {
       icon: const Icon(Icons.qr_code_2),
       label: const Text('Imprimir etiquetas'),
     );
+
+    // Employees get a read-only inventory: just the title, no action buttons.
+    if (!owner) return titleBlock;
 
     return LayoutBuilder(
       builder: (context, c) {
@@ -373,7 +382,9 @@ class _Header extends StatelessWidget {
 }
 
 class _Empty extends StatelessWidget {
-  const _Empty();
+  const _Empty({required this.canCreate});
+
+  final bool canCreate;
 
   @override
   Widget build(BuildContext context) {
@@ -388,7 +399,9 @@ class _Empty extends StatelessWidget {
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 4),
           Text(
-            'Creá el primero con "Nuevo producto".',
+            canCreate
+                ? 'Creá el primero con "Nuevo producto".'
+                : 'Todavía no hay productos cargados.',
             style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
           ),
         ],

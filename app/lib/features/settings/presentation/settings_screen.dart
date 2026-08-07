@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
+import 'package:inventy_app/shared/api/api_client.dart';
+import 'package:inventy_app/shared/image/image_compressor.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 
 /// Container: Configuración — only what the app really has (honest settings).
@@ -57,11 +60,48 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  bool _logoBusy = false;
+
+  Future<void> _pickLogo() async {
+    final x = await ImagePicker().pickImage(source: ImageSource.gallery);
+    if (x == null) return;
+    setState(() => _logoBusy = true);
+    try {
+      final bytes = await x.readAsBytes();
+      final compressed = await compressImage(bytes);
+      await ref.read(settingsProvider.notifier).setLogo(compressed);
+      if (mounted) _snack('Logo actualizado');
+    } on Object {
+      if (mounted) _snack('No se pudo subir el logo (revisá la conexión)');
+    } finally {
+      if (mounted) setState(() => _logoBusy = false);
+    }
+  }
+
+  Future<void> _removeLogo() async {
+    setState(() => _logoBusy = true);
+    try {
+      await ref.read(settingsProvider.notifier).removeLogo();
+      if (mounted) _snack('Logo eliminado');
+    } on Object {
+      if (mounted) _snack('No se pudo eliminar el logo (revisá la conexión)');
+    } finally {
+      if (mounted) setState(() => _logoBusy = false);
+    }
+  }
+
+  Widget _logoPlaceholder() => Container(
+        color: AppColors.primary,
+        child: const Icon(Icons.storefront, color: Colors.white, size: 32),
+      );
+
   void _snack(String m) =>
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(m)));
 
   @override
   Widget build(BuildContext context) {
+    final settings = ref.watch(settingsProvider);
+    final base = ref.watch(apiBaseUrlProvider);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: ListView(
@@ -98,6 +138,68 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _saveName();
                     },
                     child: const Text('Guardar')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'Logo del negocio',
+            children: [
+              Text(
+                'Se muestra en la barra lateral y en la pantalla de acceso.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      width: 72,
+                      height: 72,
+                      child: settings.hasLogo
+                          ? Image.network(
+                              '$base/settings/logo?v=${settings.logoVersion}',
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => _logoPlaceholder(),
+                            )
+                          : _logoPlaceholder(),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        FilledButton.icon(
+                          onPressed: _logoBusy ? null : _pickLogo,
+                          icon: _logoBusy
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                      strokeWidth: 2),
+                                )
+                              : const Icon(Icons.upload),
+                          label: Text(
+                              settings.hasLogo ? 'Cambiar' : 'Subir logo'),
+                        ),
+                        if (settings.hasLogo)
+                          OutlinedButton.icon(
+                            onPressed: _logoBusy ? null : _removeLogo,
+                            icon: const Icon(Icons.delete_outline,
+                                color: AppColors.danger),
+                            label: const Text('Quitar',
+                                style: TextStyle(color: AppColors.danger)),
+                          ),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

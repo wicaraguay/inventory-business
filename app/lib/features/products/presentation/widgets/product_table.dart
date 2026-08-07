@@ -13,6 +13,7 @@ class ProductTable extends StatelessWidget {
     required this.onLabel,
     required this.onEdit,
     required this.onDelete,
+    this.readOnly = false,
     super.key,
   });
 
@@ -21,6 +22,9 @@ class ProductTable extends StatelessWidget {
   final void Function(Product product) onLabel;
   final void Function(Product product) onEdit;
   final void Function(Product product) onDelete;
+
+  /// Employees see stock but cannot act on it: no per-row actions menu.
+  final bool readOnly;
 
   StockStatus _status(Product p) {
     if (p.currentStock <= 0) return StockStatus.out;
@@ -47,13 +51,15 @@ class ProductTable extends StatelessWidget {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final product = products[i];
-                    final menu = _RowMenu(
-                      product: product,
-                      onMovement: onMovement,
-                      onLabel: onLabel,
-                      onEdit: onEdit,
-                      onDelete: onDelete,
-                    );
+                    final menu = readOnly
+                        ? const SizedBox(width: 48)
+                        : _RowMenu(
+                            product: product,
+                            onMovement: onMovement,
+                            onLabel: onLabel,
+                            onEdit: onEdit,
+                            onDelete: onDelete,
+                          );
                     return narrow
                         ? _MobileRow(
                             product: product,

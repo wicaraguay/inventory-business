@@ -29,16 +29,16 @@ Future<void> main() async {
   );
 }
 
-class InventyApp extends StatelessWidget {
+class InventyApp extends ConsumerWidget {
   const InventyApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
       title: 'Tu Inventario',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
-      routerConfig: appRouter,
+      routerConfig: ref.watch(routerProvider),
     );
   }
 }

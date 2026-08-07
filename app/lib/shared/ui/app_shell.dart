@@ -1,21 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
+import 'package:inventy_app/shared/api/api_client.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 
-typedef NavItem = ({IconData icon, String label, String path});
+typedef NavItem = ({IconData icon, String label, String path, bool ownerOnly});
 
-const _navItems = <NavItem>[
-  (icon: Icons.dashboard_outlined, label: 'Dashboard', path: '/dashboard'),
-  (icon: Icons.inventory_2_outlined, label: 'Inventario', path: '/inventory'),
-  (icon: Icons.point_of_sale_outlined, label: 'Ventas', path: '/sales'),
-  (icon: Icons.swap_vert, label: 'Movimientos', path: '/movements'),
-  (icon: Icons.settings_outlined, label: 'Configuración', path: '/settings'),
+const navItems = <NavItem>[
+  (icon: Icons.dashboard_outlined, label: 'Dashboard', path: '/dashboard', ownerOnly: true),
+  (icon: Icons.inventory_2_outlined, label: 'Inventario', path: '/inventory', ownerOnly: false),
+  (icon: Icons.point_of_sale_outlined, label: 'Ventas', path: '/sales', ownerOnly: true),
+  (icon: Icons.swap_vert, label: 'Movimientos', path: '/movements', ownerOnly: true),
+  (icon: Icons.people_outline, label: 'Usuarios', path: '/users', ownerOnly: true),
+  (icon: Icons.settings_outlined, label: 'Configuración', path: '/settings', ownerOnly: true),
 ];
 
 /// App shell: persistent sidebar (wide) or drawer (narrow). Router-driven — the
-/// routed page arrives as [child]; nav taps change the URL via context.go.
+/// routed page arrives as [child]. Nav items are filtered by the user's role.
 class AppShell extends StatelessWidget {
   const AppShell({required this.child, required this.location, super.key});
 
@@ -41,10 +44,10 @@ class AppShell extends StatelessWidget {
             ),
           );
         }
-        final activeLabel = _navItems
+        final activeLabel = navItems
             .firstWhere(
               (n) => _isActive(n.path, location),
-              orElse: () => _navItems.first,
+              orElse: () => navItems.first,
             )
             .label;
         return Scaffold(
@@ -57,7 +60,7 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class _Sidebar extends StatelessWidget {
+class _Sidebar extends ConsumerWidget {
   const _Sidebar({required this.location});
 
   final String location;
@@ -70,7 +73,9 @@ class _Sidebar extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isOwner = ref.watch(currentUserProvider)?.isOwner ?? false;
+    final visible = navItems.where((n) => isOwner || !n.ownerOnly);
     return Container(
       width: 280,
       color: AppColors.surface,
@@ -80,7 +85,7 @@ class _Sidebar extends StatelessWidget {
         children: [
           const _Brand(),
           const SizedBox(height: 24),
-          for (final item in _navItems)
+          for (final item in visible)
             _NavTile(
               item: item,
               selected: AppShell._isActive(item.path, location),
@@ -98,6 +103,8 @@ class _Sidebar extends StatelessWidget {
             icon: const Icon(Icons.point_of_sale),
             label: const Text('Nueva venta'),
           ),
+          const SizedBox(height: 8),
+          const _UserFooter(),
         ],
       ),
     );
@@ -109,31 +116,85 @@ class _Brand extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final name = ref.watch(settingsProvider.select((s) => s.businessName));
+    final settings = ref.watch(settingsProvider);
+    final base = ref.watch(apiBaseUrlProvider);
     return Row(
       children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: const Icon(Icons.inventory_2, color: Colors.white, size: 22),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: settings.hasLogo
+              ? Image.network(
+                  '$base/settings/logo?v=${settings.logoVersion}',
+                  width: 40,
+                  height: 40,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _fallbackLogo(),
+                )
+              : _fallbackLogo(),
         ),
         const SizedBox(width: 12),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(name, style: Theme.of(context).textTheme.headlineMedium),
-            Text(
-              'Gestión de stock',
-              style: TextStyle(
-                fontSize: 12,
-                color: AppColors.onSurface.withValues(alpha: 0.6),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                settings.businessName,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.headlineMedium,
               ),
-            ),
-          ],
+              Text(
+                'Gestión de stock',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _fallbackLogo() => Container(
+        width: 40,
+        height: 40,
+        color: AppColors.primary,
+        child: const Icon(Icons.inventory_2, color: Colors.white, size: 22),
+      );
+}
+
+class _UserFooter extends ConsumerWidget {
+  const _UserFooter();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(currentUserProvider);
+    if (user == null) return const SizedBox.shrink();
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(user.displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+              Text(
+                user.isOwner ? 'Dueño' : 'Empleado',
+                style: TextStyle(
+                    fontSize: 12,
+                    color: AppColors.onSurface.withValues(alpha: 0.6)),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          tooltip: 'Cerrar sesión',
+          onPressed: () => ref.read(authProvider.notifier).logout(),
+          icon: const Icon(Icons.logout, color: AppColors.danger),
         ),
       ],
     );

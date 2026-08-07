@@ -8,6 +8,8 @@ import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/products/domain/product_repository.dart';
 import 'package:inventy_app/features/products/presentation/products_providers.dart';
 import 'package:inventy_app/features/products/presentation/products_screen.dart';
+import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// Fake repo: the container test needs no backend, no HTTP.
 class _FakeProductRepository implements ProductRepository {
@@ -66,10 +68,13 @@ void main() {
   testWidgets('ProductsScreen muestra la lista provista por el repo', (
     tester,
   ) async {
+    SharedPreferences.setMockInitialValues({});
+    final prefs = await SharedPreferences.getInstance();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           productRepositoryProvider.overrideWithValue(_FakeProductRepository()),
+          sharedPreferencesProvider.overrideWithValue(prefs),
         ],
         child: const MaterialApp(
           home: Scaffold(body: ProductsScreen()),

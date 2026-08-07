@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/settings/data/http_settings_repository.dart';
 import 'package:inventy_app/features/settings/domain/settings.dart';
@@ -64,6 +66,18 @@ class SettingsController extends Notifier<Settings> {
         .save(state.copyWith(defaultThreshold: v));
     await _cache(saved);
     state = saved;
+  }
+
+  /// Uploads a new business logo, then re-reads settings so hasLogo/logoVersion
+  /// (the cache-buster) update everywhere the logo is shown.
+  Future<void> setLogo(Uint8List bytes) async {
+    await ref.read(settingsRepositoryProvider).saveLogo(bytes);
+    await _refresh();
+  }
+
+  Future<void> removeLogo() async {
+    await ref.read(settingsRepositoryProvider).deleteLogo();
+    await _refresh();
   }
 }
 
