@@ -18,6 +18,7 @@ class JwtService {
       'username': user.username,
       'role': user.role,
       'name': user.displayName,
+      'perm': user.canManageInventory,
     });
     return jwt.sign(SecretKey(_secret), expiresIn: const Duration(days: 30));
   }
@@ -32,6 +33,8 @@ class JwtService {
         username: p['username'] as String,
         role: p['role'] as String,
         displayName: p['name'] as String,
+        // Tolerant of older tokens issued before this claim existed.
+        canManageInventory: p['perm'] as bool? ?? false,
       );
     } catch (_) {
       return null;

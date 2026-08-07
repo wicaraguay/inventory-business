@@ -93,9 +93,19 @@ class UsersScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (!u.isOwner && u.canManageInventory) ...[
+            const _InventoryChip(),
+            const SizedBox(width: 8),
+          ],
           _RoleChip(u.isOwner),
+          IconButton(
+            tooltip: 'Editar',
+            onPressed: () => _edit(context, ref, u),
+            icon: const Icon(Icons.edit_outlined),
+          ),
           if (!isSelf)
             IconButton(
+              tooltip: 'Eliminar',
               onPressed: () => _delete(context, ref, u),
               icon: const Icon(Icons.delete_outline, color: AppColors.danger),
             )
@@ -119,6 +129,7 @@ class UsersScreen extends ConsumerWidget {
             password: result.password,
             role: result.role,
             displayName: result.displayName,
+            canManageInventory: result.canManageInventory,
           );
       if (context.mounted) {
         await showAppAlert(context,
@@ -128,6 +139,34 @@ class UsersScreen extends ConsumerWidget {
       if (context.mounted) {
         await showAppAlert(context,
             message: 'No se pudo crear: $e', kind: AlertKind.error);
+      }
+    }
+  }
+
+  Future<void> _edit(BuildContext context, WidgetRef ref, AuthUser u) async {
+    final result = await showModalBottomSheet<NewUser>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => CreateUserSheet(user: u),
+    );
+    if (result == null) return;
+    try {
+      await ref.read(usersProvider.notifier).edit(
+            id: u.id,
+            username: result.username,
+            role: result.role,
+            displayName: result.displayName,
+            canManageInventory: result.canManageInventory,
+            newPassword: result.password,
+          );
+      if (context.mounted) {
+        await showAppAlert(context,
+            message: 'Usuario actualizado.', kind: AlertKind.success);
+      }
+    } on Exception catch (e) {
+      if (context.mounted) {
+        await showAppAlert(context,
+            message: 'No se pudo guardar: $e', kind: AlertKind.error);
       }
     }
   }
@@ -164,6 +203,37 @@ class UsersScreen extends ConsumerWidget {
             message: 'No se pudo eliminar: $e', kind: AlertKind.error);
       }
     }
+  }
+}
+
+/// Small badge marking an employee who was granted inventory management.
+class _InventoryChip extends StatelessWidget {
+  const _InventoryChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: AppColors.primary.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.inventory_2_outlined,
+              size: 14, color: AppColors.primary),
+          const SizedBox(width: 4),
+          Text(
+            'Inventario',
+            style: TextStyle(
+                color: AppColors.primary,
+                fontWeight: FontWeight.w600,
+                fontSize: 12),
+          ),
+        ],
+      ),
+    );
   }
 }
 

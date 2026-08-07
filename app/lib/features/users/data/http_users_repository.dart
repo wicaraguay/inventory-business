@@ -17,6 +17,7 @@ class HttpUsersRepository {
     required String password,
     required String role,
     required String displayName,
+    required bool canManageInventory,
   }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/users',
@@ -25,6 +26,29 @@ class HttpUsersRepository {
         'password': password,
         'role': role,
         'displayName': displayName,
+        'canManageInventory': canManageInventory,
+      },
+    );
+    return AuthUser.fromJson(res.data!);
+  }
+
+  Future<AuthUser> update({
+    required String id,
+    required String username,
+    required String role,
+    required String displayName,
+    required bool canManageInventory,
+    String? newPassword,
+  }) async {
+    final res = await _dio.put<Map<String, dynamic>>(
+      '/users/$id',
+      data: {
+        'username': username,
+        'role': role,
+        'displayName': displayName,
+        'canManageInventory': canManageInventory,
+        if (newPassword != null && newPassword.isNotEmpty)
+          'newPassword': newPassword,
       },
     );
     return AuthUser.fromJson(res.data!);

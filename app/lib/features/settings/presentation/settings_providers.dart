@@ -27,7 +27,7 @@ class SettingsController extends Notifier<Settings> {
     // from the backend (the source of truth shared across devices).
     final prefs = ref.read(sharedPreferencesProvider);
     final cached = Settings(
-      businessName: prefs.getString(_kBusinessName) ?? 'Inventy',
+      businessName: prefs.getString(_kBusinessName) ?? 'Eco Shoes',
       defaultThreshold: prefs.getInt(_kDefaultThreshold) ?? 0,
     );
     _refresh();
@@ -51,7 +51,7 @@ class SettingsController extends Notifier<Settings> {
   }
 
   Future<void> setBusinessName(String value) async {
-    final name = value.trim().isEmpty ? 'Inventy' : value.trim();
+    final name = value.trim().isEmpty ? 'Eco Shoes' : value.trim();
     final saved = await ref
         .read(settingsRepositoryProvider)
         .save(state.copyWith(businessName: name));

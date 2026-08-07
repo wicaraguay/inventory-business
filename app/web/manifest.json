@@ -1,11 +1,11 @@
 {
-    "name": "inventy_app",
-    "short_name": "inventy_app",
+    "name": "Eco Shoes - Gestión de Inventario",
+    "short_name": "Eco Shoes",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
+    "background_color": "#FFFFFF",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Gestión de inventario y ventas de Eco Shoes.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

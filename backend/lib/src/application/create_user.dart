@@ -15,6 +15,7 @@ class CreateUser {
     required String password,
     required String role,
     required String displayName,
+    bool canManageInventory = false,
   }) async {
     final user = username.trim();
     if (user.isEmpty) throw DomainException('El usuario es obligatorio');
@@ -33,6 +34,8 @@ class CreateUser {
       passwordHash: _hasher.hash(password),
       role: role,
       displayName: name,
+      // Owners can already do everything; the flag only matters for employees.
+      canManageInventory: role == 'employee' && canManageInventory,
     );
   }
 }

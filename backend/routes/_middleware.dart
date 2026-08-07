@@ -24,6 +24,7 @@ import 'package:inventy_backend/src/application/register_stock_exit.dart';
 import 'package:inventy_backend/src/application/save_product_image.dart';
 import 'package:inventy_backend/src/application/update_product.dart';
 import 'package:inventy_backend/src/application/update_settings.dart';
+import 'package:inventy_backend/src/application/update_user.dart';
 import 'package:inventy_backend/src/domain/entities/user.dart';
 import 'package:inventy_backend/src/infrastructure/auth/jwt_service.dart';
 import 'package:inventy_backend/src/infrastructure/auth/password_hasher.dart';
@@ -214,6 +215,14 @@ Handler middleware(Handler handler) {
         ),
       )
       .use(
+        provider<Future<UpdateUser>>(
+          (_) async => UpdateUser(
+            PostgresUserRepository(await Database.connection()),
+            PasswordHasher(),
+          ),
+        ),
+      )
+      .use(
         provider<Future<ChangePassword>>(
           (_) async => ChangePassword(
             PostgresUserRepository(await Database.connection()),
@@ -240,8 +249,8 @@ bool _isPublic(RequestContext context) {
   return false;
 }
 
-/// Owner-only routes. Everything not listed is available to any logged-in user
-/// (e.g. employees: GET products, register sales, product images).
+/// Strictly owner-only routes: money reports, user management and settings.
+/// These are NEVER delegated to employees.
 bool _isOwnerOnly(RequestContext context) {
   final m = context.request.method;
   final p = context.request.uri.path;
@@ -249,12 +258,20 @@ bool _isOwnerOnly(RequestContext context) {
   if (m != HttpMethod.get && (p == '/settings' || p.startsWith('/settings/'))) {
     return true;
   }
+  if (p == '/sales' && m == HttpMethod.get) return true;
+  if (p.startsWith('/sales/series')) return true;
+  return false;
+}
+
+/// Inventory-management routes: creating/editing products and registering stock
+/// movements. Allowed to the owner OR an employee with canManageInventory.
+bool _isInventoryManagement(RequestContext context) {
+  final m = context.request.method;
+  final p = context.request.uri.path;
   if (p == '/products' && m == HttpMethod.post) return true;
   if (p.startsWith('/products/') && m != HttpMethod.get) return true;
   if (p == '/movements' || p.startsWith('/movements/')) return true;
   if (p == '/alerts' || p.startsWith('/alerts/')) return true;
-  if (p == '/sales' && m == HttpMethod.get) return true;
-  if (p.startsWith('/sales/series')) return true;
   return false;
 }
 
@@ -281,6 +298,12 @@ Middleware _auth() {
         return Response.json(
           statusCode: HttpStatus.forbidden,
           body: {'error': 'Solo el dueño puede hacer esto'},
+        );
+      }
+      if (_isInventoryManagement(context) && !user.canManage) {
+        return Response.json(
+          statusCode: HttpStatus.forbidden,
+          body: {'error': 'No tenés permiso para gestionar el inventario'},
         );
       }
       return handler(ctx);

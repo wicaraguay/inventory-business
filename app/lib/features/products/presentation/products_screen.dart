@@ -24,7 +24,8 @@ class ProductsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final products = ref.watch(productsProvider);
-    final isOwner = ref.watch(currentUserProvider)?.isOwner ?? false;
+    // Owner OR an employee the owner enabled for inventory management.
+    final canManage = ref.watch(currentUserProvider)?.canManage ?? false;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -32,7 +33,7 @@ class ProductsScreen extends ConsumerWidget {
         children: [
           _Header(
             count: products.asData?.value.length,
-            owner: isOwner,
+            owner: canManage,
             onCreate: () => _openCreate(context, ref),
             onBulkCreate: () => _openBulkCreate(context, ref),
             onPrintAll: () => _printAll(context, ref),
@@ -41,10 +42,10 @@ class ProductsScreen extends ConsumerWidget {
           Expanded(
             child: products.when(
               data: (items) => items.isEmpty
-                  ? _Empty(canCreate: isOwner)
+                  ? _Empty(canCreate: canManage)
                   : ProductTable(
                       products: items,
-                      readOnly: !isOwner,
+                      readOnly: !canManage,
                       onMovement: (product, isEntry) =>
                           _openMovement(context, ref, product, isEntry),
                       onLabel: (product) => _openLabel(context, product),

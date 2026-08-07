@@ -35,7 +35,7 @@ class InventyApp extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return MaterialApp.router(
-      title: 'Tu Inventario',
+      title: 'Eco Shoes - Gestión de Inventario',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       routerConfig: ref.watch(routerProvider),

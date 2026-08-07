@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:inventy_app/features/auth/domain/auth_user.dart';
 
 typedef NewUser = ({
   String username,
   String password,
   String role,
   String displayName,
+  bool canManageInventory,
 });
 
-/// Form to create a system user (employee or owner).
+/// Form to create OR edit a system user. In edit mode ([user] != null) the
+/// password field is optional (empty = keep the current one).
 class CreateUserSheet extends StatefulWidget {
-  const CreateUserSheet({super.key});
+  const CreateUserSheet({this.user, super.key});
+
+  final AuthUser? user;
 
   @override
   State<CreateUserSheet> createState() => _CreateUserSheetState();
@@ -17,10 +22,23 @@ class CreateUserSheet extends StatefulWidget {
 
 class _CreateUserSheetState extends State<CreateUserSheet> {
   final _formKey = GlobalKey<FormState>();
-  final _name = TextEditingController();
-  final _username = TextEditingController();
+  late final TextEditingController _name;
+  late final TextEditingController _username;
   final _password = TextEditingController();
-  String _role = 'employee';
+  late String _role;
+  late bool _canManageInventory;
+
+  bool get _isEdit => widget.user != null;
+
+  @override
+  void initState() {
+    super.initState();
+    final u = widget.user;
+    _name = TextEditingController(text: u?.displayName ?? '');
+    _username = TextEditingController(text: u?.username ?? '');
+    _role = u?.role ?? 'employee';
+    _canManageInventory = u?.canManageInventory ?? false;
+  }
 
   @override
   void dispose() {
@@ -37,6 +55,7 @@ class _CreateUserSheetState extends State<CreateUserSheet> {
       password: _password.text,
       role: _role,
       displayName: _name.text.trim(),
+      canManageInventory: _role == 'employee' && _canManageInventory,
     ));
   }
 
@@ -51,7 +70,7 @@ class _CreateUserSheetState extends State<CreateUserSheet> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Nuevo usuario',
+            Text(_isEdit ? 'Editar usuario' : 'Nuevo usuario',
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
             TextFormField(
@@ -75,10 +94,17 @@ class _CreateUserSheetState extends State<CreateUserSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _password,
-              decoration: const InputDecoration(labelText: 'Contraseña'),
-              validator: (v) => (v == null || v.length < 4)
-                  ? 'Mínimo 4 caracteres'
-                  : null,
+              decoration: InputDecoration(
+                labelText: _isEdit
+                    ? 'Nueva contraseña (opcional)'
+                    : 'Contraseña',
+              ),
+              validator: (v) {
+                final value = v ?? '';
+                // Edit: empty means "keep current". Create: required, min 4.
+                if (_isEdit && value.isEmpty) return null;
+                return value.length < 4 ? 'Mínimo 4 caracteres' : null;
+              },
             ),
             const SizedBox(height: 12),
             SegmentedButton<String>(
@@ -97,8 +123,25 @@ class _CreateUserSheetState extends State<CreateUserSheet> {
                   : 'Acceso total: reportes, productos y usuarios.',
               style: const TextStyle(fontSize: 12),
             ),
+            // Inventory-management delegation only makes sense for employees.
+            if (_role == 'employee') ...[
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Puede gestionar inventario'),
+                subtitle: const Text(
+                  'Además de vender, podrá crear/editar productos y '
+                  'registrar entradas y salidas.',
+                ),
+                value: _canManageInventory,
+                onChanged: (v) => setState(() => _canManageInventory = v),
+              ),
+            ],
             const SizedBox(height: 16),
-            FilledButton(onPressed: _submit, child: const Text('Crear usuario')),
+            FilledButton(
+              onPressed: _submit,
+              child: Text(_isEdit ? 'Guardar cambios' : 'Crear usuario'),
+            ),
           ],
         ),
       ),

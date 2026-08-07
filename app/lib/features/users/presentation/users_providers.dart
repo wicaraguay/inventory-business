@@ -16,12 +16,34 @@ class UsersNotifier extends AsyncNotifier<List<AuthUser>> {
     required String password,
     required String role,
     required String displayName,
+    required bool canManageInventory,
   }) async {
     await ref.read(usersRepositoryProvider).create(
           username: username,
           password: password,
           role: role,
           displayName: displayName,
+          canManageInventory: canManageInventory,
+        );
+    ref.invalidateSelf();
+    await future;
+  }
+
+  Future<void> edit({
+    required String id,
+    required String username,
+    required String role,
+    required String displayName,
+    required bool canManageInventory,
+    String? newPassword,
+  }) async {
+    await ref.read(usersRepositoryProvider).update(
+          id: id,
+          username: username,
+          role: role,
+          displayName: displayName,
+          canManageInventory: canManageInventory,
+          newPassword: newPassword,
         );
     ref.invalidateSelf();
     await future;
