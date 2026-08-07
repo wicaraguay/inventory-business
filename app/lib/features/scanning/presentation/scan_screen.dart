@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:inventy_app/features/dashboard/presentation/dashboard_providers.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/products/presentation/products_providers.dart';
 import 'package:inventy_app/features/sales/domain/sale_repository.dart';
@@ -99,12 +100,24 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
       for (final l in cart)
         (productId: l.product.id, quantity: l.quantity, unitPrice: l.unitPrice),
     ];
+    // Which lines leave the product at/below its threshold after this sale?
+    // Computed from cart data we already have — no extra server round-trip.
+    final nowLow = <String>[
+      for (final l in cart)
+        if (l.product.currentStock - l.quantity <= l.product.lowStockThreshold)
+          l.product.name,
+    ];
     try {
       await ref.read(saleRepositoryProvider).registerSale(items);
       ref.read(cartProvider.notifier).clear();
       ref.invalidate(productsProvider);
       ref.invalidate(salesReportProvider);
-      await _alert('La venta se registró correctamente.', AlertKind.success,
+      ref.invalidate(lowStockProvider);
+      final note = nowLow.isEmpty
+          ? ''
+          : '\n\n⚠️ Quedó poco stock de: ${nowLow.toSet().join(', ')}.';
+      await _alert('La venta se registró correctamente.$note',
+          AlertKind.success,
           title: 'Venta realizada');
       if (mounted) context.go('/sales');
     } on SaleException catch (e) {

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:inventy_app/features/alerts/presentation/alerts_providers.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/api/api_client.dart';
 import 'package:inventy_app/shared/image/image_compressor.dart';
@@ -240,9 +241,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Alertas de stock bajo'),
-                subtitle: const Text('Activadas dentro de la app'),
-                value: true,
-                onChanged: null,
+                subtitle: const Text(
+                  'Muestra la campana de avisos en este dispositivo',
+                ),
+                value: ref.watch(alertsEnabledProvider),
+                onChanged: (v) =>
+                    ref.read(alertsEnabledProvider.notifier).set(v),
               ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:inventy_app/features/alerts/presentation/widgets/alerts_bell.dart';
 import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/features/auth/presentation/widgets/change_password_sheet.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
@@ -52,7 +53,10 @@ class AppShell extends StatelessWidget {
             )
             .label;
         return Scaffold(
-          appBar: AppBar(title: Text(activeLabel)),
+          appBar: AppBar(
+            title: Text(activeLabel),
+            actions: const [AlertsBell(), SizedBox(width: 4)],
+          ),
           drawer: Drawer(child: _Sidebar(location: location)),
           body: child,
         );
@@ -84,7 +88,9 @@ class _Sidebar extends ConsumerWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const _Brand(),
+          const Row(
+            children: [Expanded(child: _Brand()), AlertsBell()],
+          ),
           const SizedBox(height: 24),
           for (final item in visible)
             _NavTile(
