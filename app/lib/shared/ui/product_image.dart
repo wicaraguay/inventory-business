@@ -49,6 +49,7 @@ class ProductThumbnail extends ConsumerWidget {
       borderRadius: radius,
       child: Image.network(
         url,
+        headers: apiAuthHeaders,
         width: size,
         height: size,
         fit: BoxFit.cover,
@@ -91,7 +92,8 @@ Future<void> showProductImageDialog(
               maxScale: 5,
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(16),
-                child: Image.network(url, fit: BoxFit.contain),
+                child: Image.network(url,
+                    headers: apiAuthHeaders, fit: BoxFit.contain),
               ),
             ),
           ),

@@ -1,0 +1,34 @@
+# Nginx del host para Inventy. Reemplazá INVENTY_DOMAIN por tu subdominio.
+# 1) cp deploy/nginx-inventy.conf.example /etc/nginx/sites-available/inventy.conf
+# 2) editar INVENTY_DOMAIN
+# 3) ln -s /etc/nginx/sites-available/inventy.conf /etc/nginx/sites-enabled/
+# 4) nginx -t && systemctl reload nginx
+# 5) certbot --nginx -d INVENTY_DOMAIN   (agrega el HTTPS y el redirect solo)
+
+server {
+    listen 80;
+    server_name INVENTY_DOMAIN;
+
+    # Permitir subir imágenes de producto.
+    client_max_body_size 12m;
+
+    # Contraseña (barrera hasta tener login real en la app).
+    auth_basic "Inventy";
+    auth_basic_user_file /etc/nginx/.htpasswd-inventy;
+
+    # /api/* -> backend (Dart Frog). Quita el prefijo /api.
+    location /api/ {
+        proxy_pass http://127.0.0.1:8090/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Todo lo demás -> web (Flutter servido por nginx interno).
+    location / {
+        proxy_pass http://127.0.0.1:8091/;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}

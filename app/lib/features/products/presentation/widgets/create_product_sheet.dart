@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
+import 'package:inventy_app/shared/api/api_client.dart';
 import 'package:inventy_app/shared/image/image_compressor.dart';
 import 'package:inventy_app/shared/sku.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
@@ -300,6 +301,7 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
     if (_showsExistingImage) {
       return frame(Image.network(
         productImageUrl(widget.apiBaseUrl, widget.product!),
+        headers: apiAuthHeaders,
         fit: BoxFit.cover,
         errorBuilder: (_, __, ___) => _placeholder(size),
       ));

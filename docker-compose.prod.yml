@@ -1,0 +1,63 @@
+# Production stack — sits BEHIND the host's Nginx (which adds HTTPS + password).
+# backend and web listen ONLY on 127.0.0.1 of the VPS; Postgres stays internal.
+# Usage: docker compose -f docker-compose.prod.yml up -d --build backend web
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    environment:
+      DB_HOST: postgres
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # Only reachable from the host (Nginx proxies to it). NOT public.
+    ports:
+      - "127.0.0.1:8090:8080"
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: app/Dockerfile.web
+      args:
+        API_BASE_URL: ${WEB_API_BASE_URL}
+        API_AUTH: ${WEB_API_AUTH:-}
+    ports:
+      - "127.0.0.1:8091:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  migrate:
+    image: amacneil/dbmate:latest
+    environment:
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@postgres:5432/${DB_NAME}?sslmode=disable
+      DBMATE_MIGRATIONS_DIR: /db/migrations
+      DBMATE_SCHEMA_FILE: /db/schema.sql
+    volumes:
+      - ./db:/db
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["tools"]
+
+volumes:
+  pgdata:
