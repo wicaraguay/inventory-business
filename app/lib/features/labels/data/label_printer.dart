@@ -7,9 +7,13 @@ import 'package:printing/printing.dart';
 
 const _mm = PdfPageFormat.mm;
 
-/// How many label columns fit reasonably on an A4 sheet. Beyond this the QR
-/// gets too small to scan comfortably.
+/// How many label columns fit reasonably on an A4 sheet WITH text beside the QR.
+/// Beyond this the QR gets too small to scan comfortably.
 const maxLabelColumns = 5;
+
+/// QR-only labels are much narrower (no text), so more columns fit while the QR
+/// stays ~17mm — still comfortable to scan, with room to cut.
+const maxLabelColumnsQrOnly = 8;
 
 /// One product label. By default it's JUST the QR (encoding the SKU), centered.
 /// With [showText] the name / detail / sku are printed beside it.
@@ -99,7 +103,8 @@ Future<void> printProductLabels(
   const usableHeightMm = 297 - pageMarginMm * 2; // A4 height - margins
   const cellHeightMm = 28.0;
 
-  final cols = columns.clamp(1, maxLabelColumns);
+  final cols =
+      columns.clamp(1, showText ? maxLabelColumns : maxLabelColumnsQrOnly);
   // Subtract a tiny safety margin so N columns + gaps stay STRICTLY under the
   // usable width — otherwise rounding pushes the last column to a new row
   // (e.g. 5 columns rendered as 4).
@@ -108,11 +113,11 @@ Future<void> printProductLabels(
   final rowsPerPage = ((usableHeightMm + gapMm) / (cellHeightMm + gapMm)).floor();
   final perPage = cols * rowsPerPage;
 
-  // QR size: with text it shares the cell (0.45 width); QR-only can use most of
-  // the cell so it stays big and easy to scan even at 5 columns.
+  // QR size: with text it shares the cell (0.45 width); QR-only fills the cell,
+  // minus padding, so it never overflows even at 8 columns.
   final qrSizeMm = showText
       ? math.min(cellHeightMm - 4, cellWidthMm * 0.45).clamp(12.0, 20.0)
-      : math.min(cellHeightMm - 3, cellWidthMm * 0.9).clamp(14.0, 24.0);
+      : math.min(cellHeightMm - 4, cellWidthMm - 4).clamp(11.0, 24.0);
 
   pw.Widget cell(Product p) => pw.Container(
         width: cellWidthMm * _mm,

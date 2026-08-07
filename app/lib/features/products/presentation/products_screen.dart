@@ -226,7 +226,9 @@ class ProductsScreen extends ConsumerWidget {
                 style: Theme.of(ctx).textTheme.labelLarge,
               ),
             ),
-            for (var c = 2; c <= maxLabelColumns; c++)
+            for (var c = 2;
+                c <= (withText ? maxLabelColumns : maxLabelColumnsQrOnly);
+                c++)
               SimpleDialogOption(
                 onPressed: () => Navigator.of(ctx)
                     .pop((columns: c, withText: withText)),

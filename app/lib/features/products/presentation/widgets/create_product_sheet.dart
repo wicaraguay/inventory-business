@@ -127,9 +127,19 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
 
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
+    var sku = _sku.text.trim();
+    // Create mode hides the SKU field: it's auto-derived from the name. Guard
+    // the rare case where the name has no usable letters (e.g. only symbols).
+    if (widget.product == null && sku.isEmpty) {
+      final fallback =
+          _name.text.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+      sku = fallback.isEmpty
+          ? 'ITEM'
+          : fallback.substring(0, fallback.length.clamp(0, 6));
+    }
     Navigator.of(context).pop((
       name: _name.text.trim(),
-      sku: _sku.text.trim(),
+      sku: sku,
       detail: _clean(_detail),
       threshold: int.tryParse(_threshold.text.trim()) ?? 0,
       initialStock: int.tryParse(_initialStock.text.trim()) ?? 0,
@@ -180,18 +190,22 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
                         labelText: 'Detalle (opcional) — ej. talle 40 · negro',
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    TextFormField(
-                      controller: _sku,
-                      decoration: const InputDecoration(
-                        labelText: 'Código interno / SKU (va en el QR)',
-                        helperText:
-                            'Se genera solo desde el nombre — podés editarlo',
+                    // The SKU is auto-generated from the name and goes into the
+                    // QR. Hidden on CREATE (one less field for the owner); shown
+                    // on EDIT in case the code needs a manual fix.
+                    if (isEdit) ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _sku,
+                        decoration: const InputDecoration(
+                          labelText: 'Código interno / SKU (va en el QR)',
+                          helperText: 'Se generó desde el nombre',
+                        ),
+                        validator: (v) => (v == null || v.trim().isEmpty)
+                            ? 'El código es obligatorio'
+                            : null,
                       ),
-                      validator: (v) => (v == null || v.trim().isEmpty)
-                          ? 'El código es obligatorio'
-                          : null,
-                    ),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       children: [
