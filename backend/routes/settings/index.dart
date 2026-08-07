@@ -40,4 +40,6 @@ Future<Response> _update(RequestContext context) async {
 Map<String, dynamic> _json(AppSettings s) => {
       'businessName': s.businessName,
       'defaultThreshold': s.defaultThreshold,
+      'hasLogo': s.hasLogo,
+      'logoVersion': s.logoVersion,
     };

@@ -11,8 +11,7 @@ class PostgresProductRepository implements ProductRepository {
   final Connection _db;
 
   // Prices cast to float8 so the driver reads them as doubles (not numeric->String).
-  static const _cols =
-      'p.id, p.name, p.detail, p.sku, p.low_stock_threshold, '
+  static const _cols = 'p.id, p.name, p.detail, p.sku, p.low_stock_threshold, '
       'p.sale_price::float8, p.min_price::float8';
 
   @override
@@ -128,8 +127,7 @@ class PostgresProductRepository implements ProductRepository {
 
   // Extra read columns appended after $_cols (index 7+): stock, image flag,
   // and an image "version" (epoch seconds) used to cache-bust the image URL.
-  static const _readExtras =
-      'COALESCE(ps.current_stock, 0), '
+  static const _readExtras = 'COALESCE(ps.current_stock, 0), '
       '(pi.product_id IS NOT NULL) AS has_image, '
       'COALESCE(extract(epoch FROM pi.updated_at)::bigint, 0) AS image_version';
 

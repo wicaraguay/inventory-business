@@ -36,7 +36,8 @@ void main() {
     verify(() => sales.register(any())).called(1);
   });
 
-  test('rechaza vender más que el stock disponible (agregando ítems)', () async {
+  test('rechaza vender más que el stock disponible (agregando ítems)',
+      () async {
     when(() => stock.currentStock('p1')).thenAnswer((_) async => 3);
 
     expect(
@@ -52,11 +53,13 @@ void main() {
   test('rechaza venta vacía, cantidad <= 0 y precio negativo', () async {
     expect(() => useCase.call([]), throwsA(isA<DomainException>()));
     expect(
-      () => useCase.call([SaleItem(productId: 'p1', quantity: 0, unitPrice: 1)]),
+      () =>
+          useCase.call([SaleItem(productId: 'p1', quantity: 0, unitPrice: 1)]),
       throwsA(isA<DomainException>()),
     );
     expect(
-      () => useCase.call([SaleItem(productId: 'p1', quantity: 1, unitPrice: -5)]),
+      () =>
+          useCase.call([SaleItem(productId: 'p1', quantity: 1, unitPrice: -5)]),
       throwsA(isA<DomainException>()),
     );
   });

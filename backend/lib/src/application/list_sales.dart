@@ -13,6 +13,9 @@ class ListSales {
 
   Future<SalesSummary> summary() => _repository.summary();
 
-  Future<List<SalesBucket>> series({required String by, required int buckets}) =>
+  Future<List<SalesBucket>> series({
+    required String by,
+    required int buckets,
+  }) =>
       _repository.series(by: by, buckets: buckets);
 }

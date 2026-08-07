@@ -9,9 +9,8 @@ Future<Response> onRequest(RequestContext context) async {
     return Response(statusCode: HttpStatus.methodNotAllowed);
   }
 
-  final by = context.request.uri.queryParameters['by'] == 'hour'
-      ? 'hour'
-      : 'day';
+  final by =
+      context.request.uri.queryParameters['by'] == 'hour' ? 'hour' : 'day';
   final buckets = by == 'hour' ? 24 : 14;
 
   final useCase = await context.read<Future<ListSales>>();

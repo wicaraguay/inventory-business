@@ -22,7 +22,8 @@ void main() {
   });
 
   test('registra una salida cuando hay stock suficiente', () async {
-    when(() => repository.currentStock('product-1')).thenAnswer((_) async => 10);
+    when(() => repository.currentStock('product-1'))
+        .thenAnswer((_) async => 10);
     when(() => repository.save(any())).thenAnswer((_) async {});
 
     await useCase.call('product-1', 4);

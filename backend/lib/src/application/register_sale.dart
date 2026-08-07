@@ -30,7 +30,8 @@ class RegisterSale {
     // Aggregate quantity per product (same product may appear twice).
     final byProduct = <String, int>{};
     for (final item in items) {
-      byProduct[item.productId] = (byProduct[item.productId] ?? 0) + item.quantity;
+      byProduct[item.productId] =
+          (byProduct[item.productId] ?? 0) + item.quantity;
     }
     for (final entry in byProduct.entries) {
       final available = await _stock.currentStock(entry.key);
