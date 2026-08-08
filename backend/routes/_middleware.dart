@@ -260,6 +260,14 @@ bool _isOwnerOnly(RequestContext context) {
   }
   if (p == '/sales' && m == HttpMethod.get) return true;
   if (p.startsWith('/sales/series')) return true;
+  // Deleting a product outright is destructive: owner only (an inventory helper
+  // can create/edit, but not delete). NOT the image sub-route (that's just its
+  // photo, part of managing inventory).
+  if (m == HttpMethod.delete &&
+      p.startsWith('/products/') &&
+      !p.endsWith('/image')) {
+    return true;
+  }
   return false;
 }
 

@@ -248,22 +248,8 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
                       ),
                       const SizedBox(height: 8),
                     ],
-                    TextFormField(
-                      controller: _threshold,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Umbral de stock bajo (alerta)',
-                        helperText:
-                            'Te avisa cuando el stock baja de este número',
-                      ),
-                      validator: (v) {
-                        final n = int.tryParse((v ?? '').trim());
-                        if (n == null || n < 0) {
-                          return 'Ingresá un número válido (>= 0)';
-                        }
-                        return null;
-                      },
-                    ),
+                    // The low-stock threshold is a single GLOBAL setting now
+                    // (Configuración → Preferencias), so it's not asked here.
                   ],
                 ),
               ),

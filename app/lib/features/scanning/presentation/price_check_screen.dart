@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/scanning/presentation/scanning_providers.dart';
+import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/format.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/product_image.dart';
@@ -177,9 +178,10 @@ class _PriceCheckScreenState extends ConsumerState<PriceCheckScreen> {
 
   /// Small colored badge telling the employee if there's stock to sell.
   Widget _stockChip(Product p) {
+    final threshold = ref.read(settingsProvider).defaultThreshold;
     final (color, label) = switch (p) {
       _ when p.currentStock <= 0 => (AppColors.danger, 'Sin stock'),
-      _ when p.currentStock <= p.lowStockThreshold =>
+      _ when p.currentStock <= threshold =>
         (AppColors.warning, 'Quedan ${p.currentStock} (bajo)'),
       _ => (AppColors.success, 'Stock ${p.currentStock}'),
     };

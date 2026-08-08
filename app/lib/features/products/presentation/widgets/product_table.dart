@@ -9,6 +9,7 @@ import 'package:inventy_app/shared/ui/product_image.dart';
 class ProductTable extends StatelessWidget {
   const ProductTable({
     required this.products,
+    required this.threshold,
     required this.onMovement,
     required this.onLabel,
     required this.onEdit,
@@ -18,6 +19,9 @@ class ProductTable extends StatelessWidget {
   });
 
   final List<Product> products;
+
+  /// Global low-stock threshold (from settings) used to color every row.
+  final int threshold;
   final void Function(Product product, bool isEntry) onMovement;
   final void Function(Product product) onLabel;
   final void Function(Product product) onEdit;
@@ -28,7 +32,7 @@ class ProductTable extends StatelessWidget {
 
   StockStatus _status(Product p) {
     if (p.currentStock <= 0) return StockStatus.out;
-    if (p.currentStock <= p.lowStockThreshold) return StockStatus.low;
+    if (p.currentStock <= threshold) return StockStatus.low;
     return StockStatus.inStock;
   }
 

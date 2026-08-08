@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/scanning/presentation/scanning_providers.dart';
+import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/product_image.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -121,7 +122,7 @@ class _IdentifyScreenState extends ConsumerState<IdentifyScreen> {
       );
     }
     final p = _found!;
-    final low = p.currentStock <= p.lowStockThreshold;
+    final low = p.currentStock <= ref.read(settingsProvider).defaultThreshold;
     return _card(
       color: AppColors.surface,
       child: Column(

@@ -213,12 +213,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 controller: _threshold,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
-                  labelText: 'Umbral de stock bajo por defecto',
+                  labelText: 'Umbral de stock bajo (global)',
                 ),
               ),
               const SizedBox(height: 8),
               Text(
-                'Se usa como valor inicial al crear un producto nuevo.',
+                'Se avisa cuando cualquier producto queda en o por debajo de '
+                'este número. Aplica a todos los productos.',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.onSurface.withValues(alpha: 0.6),

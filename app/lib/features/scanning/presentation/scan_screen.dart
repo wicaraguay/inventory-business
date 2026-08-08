@@ -10,6 +10,7 @@ import 'package:inventy_app/features/sales/presentation/sales_providers.dart';
 import 'package:inventy_app/features/sales/presentation/widgets/add_to_cart_sheet.dart';
 import 'package:inventy_app/features/sales/presentation/widgets/cart_panel.dart';
 import 'package:inventy_app/features/scanning/presentation/scanning_providers.dart';
+import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/app_alert.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
@@ -102,10 +103,10 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     ];
     // Which lines leave the product at/below its threshold after this sale?
     // Computed from cart data we already have — no extra server round-trip.
+    final threshold = ref.read(settingsProvider).defaultThreshold;
     final nowLow = <String>[
       for (final l in cart)
-        if (l.product.currentStock - l.quantity <= l.product.lowStockThreshold)
-          l.product.name,
+        if (l.product.currentStock - l.quantity <= threshold) l.product.name,
     ];
     try {
       await ref.read(saleRepositoryProvider).registerSale(items);

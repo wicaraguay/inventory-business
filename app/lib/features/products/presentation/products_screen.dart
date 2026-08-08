@@ -49,6 +49,7 @@ class ProductsScreen extends ConsumerWidget {
                   ? _Empty(canCreate: canManage)
                   : ProductTable(
                       products: items,
+                      threshold: ref.watch(settingsProvider).defaultThreshold,
                       readOnly: !canManage,
                       onMovement: (product, isEntry) =>
                           _openMovement(context, ref, product, isEntry),
