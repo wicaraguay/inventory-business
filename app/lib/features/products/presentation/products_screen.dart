@@ -280,6 +280,7 @@ class ProductsScreen extends ConsumerWidget {
     WidgetRef ref,
     Product product,
   ) async {
+    debugPrint('🗑️ [1] click Eliminar -> id=${product.id} name=${product.name}');
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
@@ -301,14 +302,19 @@ class ProductsScreen extends ConsumerWidget {
         ],
       ),
     );
+    debugPrint('🗑️ [2] confirmación del diálogo = $ok');
     if (ok != true) return;
     try {
+      debugPrint('🗑️ [3] llamando notifier.delete...');
       await ref.read(productsProvider.notifier).delete(product.id);
+      debugPrint('🗑️ [4] notifier.delete OK (sin error)');
       if (context.mounted) {
         await showAppAlert(context,
             message: 'Producto eliminado.', kind: AlertKind.success);
       }
-    } on Object catch (e) {
+    } on Object catch (e, st) {
+      debugPrint('🔴 [X] ERROR al borrar: $e');
+      debugPrint('$st');
       if (context.mounted) {
         await showAppAlert(context,
             message: 'No se pudo eliminar: $e', kind: AlertKind.error);

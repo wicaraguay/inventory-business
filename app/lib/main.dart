@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +12,18 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Log EVERY error to the console (browser devtools on web), including async
+  // errors that the ErrorWidget can't catch. This is how we trace crashes.
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    debugPrint('🔴 [FlutterError] ${details.exceptionAsString()}');
+    if (details.stack != null) debugPrint('${details.stack}');
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    debugPrint('🔴 [Uncaught] $error');
+    debugPrint('$stack');
+    return true;
+  };
   // Safety net: if a screen throws while building, show a readable message
   // instead of a black/blank screen (which is what release builds show by
   // default). Self-contained (literal colors, own Directionality) so it renders
