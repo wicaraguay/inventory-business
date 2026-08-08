@@ -1,5 +1,6 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
-import 'package:flutter/foundation.dart';
 import 'package:inventy_app/features/products/domain/bulk_product_input.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/products/domain/product_repository.dart';
@@ -74,15 +75,7 @@ class HttpProductRepository implements ProductRepository {
 
   @override
   Future<void> delete(String id) async {
-    debugPrint('🌐 [http] DELETE ${_dio.options.baseUrl}/products/$id');
-    try {
-      final res = await _dio.delete<void>('/products/$id');
-      debugPrint('🌐 [http] DELETE status=${res.statusCode}');
-    } on DioException catch (e) {
-      debugPrint('🔴 [http] DELETE falló: ${e.type} '
-          'status=${e.response?.statusCode} data=${e.response?.data}');
-      rethrow;
-    }
+    await _dio.delete<void>('/products/$id');
   }
 
   @override
