@@ -47,7 +47,7 @@ class _Empty extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.swap_vert, size: 48, color: AppColors.inputBorder),
+          Icon(Icons.swap_vert, size: 48, color: AppColors.inputBorder),
           const SizedBox(height: 12),
           Text('Sin movimientos',
               style: Theme.of(context).textTheme.headlineMedium),

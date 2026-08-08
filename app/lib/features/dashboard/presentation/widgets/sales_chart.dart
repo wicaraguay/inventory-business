@@ -49,7 +49,7 @@ class SalesChart extends StatelessWidget {
           drawVerticalLine: false,
           horizontalInterval: maxY / 4,
           getDrawingHorizontalLine: (_) =>
-              const FlLine(color: AppColors.divider, strokeWidth: 1),
+              FlLine(color: AppColors.divider, strokeWidth: 1),
         ),
         borderData: FlBorderData(show: false),
         titlesData: FlTitlesData(

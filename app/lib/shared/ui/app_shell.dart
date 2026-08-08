@@ -201,7 +201,7 @@ class _UserFooter extends ConsumerWidget {
         ),
         PopupMenuButton<String>(
           tooltip: 'Mi cuenta',
-          icon: const Icon(Icons.more_vert, color: AppColors.onSurface),
+          icon: Icon(Icons.more_vert, color: AppColors.onSurface),
           onSelected: (action) {
             if (action == 'password') {
               showModalBottomSheet<void>(

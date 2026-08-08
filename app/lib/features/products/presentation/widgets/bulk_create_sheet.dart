@@ -81,7 +81,7 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
                     borderRadius: BorderRadius.circular(10),
                     border: Border.all(color: AppColors.inputBorder),
                   ),
-                  child: const Icon(Icons.image_outlined,
+                  child: Icon(Icons.image_outlined,
                       color: AppColors.inputBorder),
                 ),
         ),

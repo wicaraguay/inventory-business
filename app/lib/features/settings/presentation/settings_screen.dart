@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:inventy_app/features/alerts/presentation/alerts_providers.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/api/api_client.dart';
+import 'package:inventy_app/shared/theme/theme_mode_provider.dart';
 import 'package:inventy_app/shared/image/image_compressor.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 
@@ -231,6 +232,33 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _saveThreshold();
                     },
                     child: const Text('Guardar')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'Apariencia',
+            children: [
+              SegmentedButton<ThemeMode>(
+                showSelectedIcon: false,
+                segments: const [
+                  ButtonSegment(value: ThemeMode.light, label: Text('Claro')),
+                  ButtonSegment(value: ThemeMode.dark, label: Text('Oscuro')),
+                  ButtonSegment(
+                      value: ThemeMode.system, label: Text('Sistema')),
+                ],
+                selected: {ref.watch(themeModeProvider)},
+                onSelectionChanged: (s) =>
+                    ref.read(themeModeProvider.notifier).set(s.first),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Tema de la app en este dispositivo. "Sistema" sigue la '
+                'configuración del teléfono o la computadora.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurface.withValues(alpha: 0.6),
+                ),
               ),
             ],
           ),

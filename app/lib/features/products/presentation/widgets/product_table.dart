@@ -269,7 +269,7 @@ class _RowMenu extends StatelessWidget {
     return SizedBox(
       width: 48,
       child: PopupMenuButton<String>(
-        icon: const Icon(Icons.more_vert, color: AppColors.onSurface),
+        icon: Icon(Icons.more_vert, color: AppColors.onSurface),
         onSelected: (action) => switch (action) {
           'entry' => onMovement(product, true),
           'exit' => onMovement(product, false),

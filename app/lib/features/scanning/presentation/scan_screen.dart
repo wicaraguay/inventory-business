@@ -158,7 +158,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.no_photography_outlined,
+            Icon(Icons.no_photography_outlined,
                 size: 40, color: AppColors.inputBorder),
             const SizedBox(height: 12),
             const Text('Cámara no disponible',

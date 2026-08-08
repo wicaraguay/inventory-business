@@ -331,7 +331,7 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: AppColors.inputBorder),
         ),
-        child: const Icon(Icons.add_a_photo_outlined,
+        child: Icon(Icons.add_a_photo_outlined,
             color: AppColors.inputBorder, size: 32),
       );
 }

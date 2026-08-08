@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_web_plugins/url_strategy.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/router/app_router.dart';
+import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/theme/app_theme.dart';
+import 'package:inventy_app/shared/theme/theme_mode_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
@@ -38,7 +40,15 @@ class InventyApp extends ConsumerWidget {
       title: 'Eco Shoes - Gestión de Inventario',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      themeMode: ref.watch(themeModeProvider),
       routerConfig: ref.watch(routerProvider),
+      // Sync the palette flag with the theme MaterialApp actually resolved, so
+      // AppColors' structural getters return the right values everywhere.
+      builder: (context, child) {
+        AppColors.dark = Theme.of(context).brightness == Brightness.dark;
+        return child ?? const SizedBox.shrink();
+      },
     );
   }
 }

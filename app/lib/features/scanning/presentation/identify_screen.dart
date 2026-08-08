@@ -123,7 +123,7 @@ class _IdentifyScreenState extends ConsumerState<IdentifyScreen> {
     final p = _found!;
     final low = p.currentStock <= p.lowStockThreshold;
     return _card(
-      color: Colors.white,
+      color: AppColors.surface,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -205,7 +205,7 @@ class _IdentifyScreenState extends ConsumerState<IdentifyScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.no_photography_outlined,
+            Icon(Icons.no_photography_outlined,
                 size: 40, color: AppColors.inputBorder),
             const SizedBox(height: 12),
             const Text('Cámara no disponible',

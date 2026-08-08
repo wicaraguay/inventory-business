@@ -438,7 +438,7 @@ class _Empty extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.inventory_2_outlined,
+          Icon(Icons.inventory_2_outlined,
               size: 48, color: AppColors.inputBorder),
           const SizedBox(height: 12),
           Text('No hay productos',

@@ -57,7 +57,7 @@ class ProductThumbnail extends ConsumerWidget {
           width: size,
           height: size,
           color: AppColors.canvas,
-          child: const Icon(Icons.broken_image_outlined,
+          child: Icon(Icons.broken_image_outlined,
               color: AppColors.inputBorder),
         ),
       ),

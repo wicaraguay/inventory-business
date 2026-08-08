@@ -19,12 +19,13 @@ class AlertsBell extends ConsumerWidget {
     if (!canManage || !enabled) return const SizedBox.shrink();
 
     final count = ref.watch(lowStockProvider).asData?.value.length ?? 0;
-    final bell = IconButton(
+    // Badge wraps the ICON (not the 48px button) so the number hugs the bell.
+    const icon = Icon(Icons.notifications_outlined);
+    return IconButton(
       tooltip: 'Alertas de stock',
-      icon: const Icon(Icons.notifications_outlined),
       onPressed: () => _open(context, ref),
+      icon: count == 0 ? icon : Badge.count(count: count, child: icon),
     );
-    return count == 0 ? bell : Badge.count(count: count, child: bell);
   }
 
   void _open(BuildContext context, WidgetRef ref) {
