@@ -45,13 +45,18 @@ class _AlertsSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(lowStockProvider);
-    return SizedBox(
-      height: MediaQuery.of(context).size.height * 0.6,
-      child: async.when(
-        data: (items) => LowStockList(items: items),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(
-          child: Padding(
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.of(context).size.height * 0.7,
+        ),
+        child: async.when(
+          data: (items) => LowStockList(items: items, shrinkWrap: true),
+          loading: () => const Padding(
+            padding: EdgeInsets.all(32),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+          error: (e, _) => Padding(
             padding: const EdgeInsets.all(24),
             child: Text(
               'No se pudieron cargar las alertas.\n$e',

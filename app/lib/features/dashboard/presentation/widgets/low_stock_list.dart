@@ -3,17 +3,29 @@ import 'package:inventy_app/features/dashboard/domain/low_stock_item.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/atoms/status_pill.dart';
 
-/// Presentational: the low-stock alerts card.
+/// Presentational: the low-stock alerts card. [shrinkWrap] sizes it to its
+/// content (for the bottom sheet); otherwise it fills its space (dashboard).
 class LowStockList extends StatelessWidget {
-  const LowStockList({required this.items, super.key});
+  const LowStockList({required this.items, this.shrinkWrap = false, super.key});
 
   final List<LowStockItem> items;
+  final bool shrinkWrap;
 
   @override
   Widget build(BuildContext context) {
+    final list = items.isEmpty
+        ? const _AllGood()
+        : ListView.separated(
+            shrinkWrap: shrinkWrap,
+            physics: shrinkWrap ? const ClampingScrollPhysics() : null,
+            itemCount: items.length,
+            separatorBuilder: (_, __) => const Divider(height: 1),
+            itemBuilder: (_, i) => _Row(item: items[i]),
+          );
     return Card(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: shrinkWrap ? MainAxisSize.min : MainAxisSize.max,
         children: [
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
@@ -23,15 +35,7 @@ class LowStockList extends StatelessWidget {
             ),
           ),
           const Divider(height: 1),
-          Expanded(
-            child: items.isEmpty
-                ? const _AllGood()
-                : ListView.separated(
-                    itemCount: items.length,
-                    separatorBuilder: (_, __) => const Divider(height: 1),
-                    itemBuilder: (_, i) => _Row(item: items[i]),
-                  ),
-          ),
+          if (shrinkWrap) Flexible(child: list) else Expanded(child: list),
         ],
       ),
     );
@@ -45,17 +49,63 @@ class _Row extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status =
-        item.currentStock <= 0 ? StockStatus.out : StockStatus.low;
-    final subtitle = [
-      if (item.detail != null && item.detail!.isNotEmpty) item.detail!,
-      '${item.sku}  ·  ${item.currentStock} de ${item.threshold}',
-    ].join('  ·  ');
-    return ListTile(
-      leading: const Icon(Icons.warning_amber_rounded, color: AppColors.warning),
-      title: Text(item.name),
-      subtitle: Text(subtitle),
-      trailing: StatusPill(status),
+    final out = item.currentStock <= 0;
+    final status = out ? StockStatus.out : StockStatus.low;
+    final color = out ? AppColors.danger : AppColors.warning;
+    final muted = AppColors.onSurface.withValues(alpha: 0.6);
+    final hasDetail = item.detail != null && item.detail!.isNotEmpty;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Row(
+        children: [
+          Icon(
+            out ? Icons.error_outline : Icons.warning_amber_rounded,
+            color: color,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  item.name,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  hasDetail
+                      ? '${item.detail}  ·  umbral ${item.threshold}'
+                      : 'Umbral ${item.threshold}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 12, color: muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              StatusPill(status),
+              const SizedBox(height: 4),
+              Text(
+                out ? 'Agotado' : 'Quedan ${item.currentStock}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: muted,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }
