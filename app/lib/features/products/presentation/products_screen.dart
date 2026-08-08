@@ -283,7 +283,7 @@ class ProductsScreen extends ConsumerWidget {
     debugPrint('🗑️ [1] click Eliminar -> id=${product.id} name=${product.name}');
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Eliminar producto'),
         content: Text(
           '¿Eliminar "${product.name}"? También se borran sus movimientos y '
@@ -291,12 +291,18 @@ class ProductsScreen extends ConsumerWidget {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () {
+              debugPrint('🗑️ [1b] click CANCELAR en el diálogo');
+              Navigator.of(dialogCtx).pop(false);
+            },
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () {
+              debugPrint('🗑️ [1b] click ELIMINAR (confirmar) en el diálogo');
+              Navigator.of(dialogCtx).pop(true);
+            },
             child: const Text('Eliminar'),
           ),
         ],

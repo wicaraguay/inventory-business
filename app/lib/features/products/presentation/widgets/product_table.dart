@@ -274,12 +274,20 @@ class _RowMenu extends StatelessWidget {
       width: 48,
       child: PopupMenuButton<String>(
         icon: Icon(Icons.more_vert, color: AppColors.onSurface),
-        onSelected: (action) => switch (action) {
-          'entry' => onMovement(product, true),
-          'exit' => onMovement(product, false),
-          'label' => onLabel(product),
-          'edit' => onEdit(product),
-          _ => onDelete(product),
+        onSelected: (action) {
+          debugPrint('🗑️ [0] menú seleccionó: "$action" (producto ${product.name})');
+          switch (action) {
+            case 'entry':
+              onMovement(product, true);
+            case 'exit':
+              onMovement(product, false);
+            case 'label':
+              onLabel(product);
+            case 'edit':
+              onEdit(product);
+            default:
+              onDelete(product);
+          }
         },
         itemBuilder: (_) => const [
           PopupMenuItem(
