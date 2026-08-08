@@ -12,6 +12,43 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Safety net: if a screen throws while building, show a readable message
+  // instead of a black/blank screen (which is what release builds show by
+  // default). Self-contained (literal colors, own Directionality) so it renders
+  // even when the failing subtree lacks a theme.
+  ErrorWidget.builder = (details) => Directionality(
+        textDirection: TextDirection.ltr,
+        child: Container(
+          color: const Color(0xFFF8FAFC),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.error_outline,
+                  color: Color(0xFFBA1A1A), size: 40),
+              const SizedBox(height: 12),
+              const Text(
+                'Ocurrió un error al mostrar esta pantalla',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1E293B),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '${details.exception}',
+                textAlign: TextAlign.center,
+                maxLines: 8,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+              ),
+            ],
+          ),
+        ),
+      );
   // Clean URLs on web (/inventory/abc instead of /#/inventory/abc).
   if (kIsWeb) usePathUrlStrategy();
   // On mobile, use the full screen: hide the top status bar (clock/battery),

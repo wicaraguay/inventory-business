@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/products/data/http_product_repository.dart';
 import 'package:inventy_app/features/products/domain/bulk_product_input.dart';
+import 'package:inventy_app/features/dashboard/presentation/dashboard_providers.dart';
 import 'package:inventy_app/features/movements/presentation/movements_providers.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/products/domain/product_repository.dart';
@@ -96,8 +97,12 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
 
   Future<void> delete(String id) async {
     await ref.read(productRepositoryProvider).delete(id);
-    ref.invalidateSelf();
-    await future;
+    // The product is gone on the server: drop it from the in-memory list rather
+    // than refetching (a refetch that errors could blank the screen). Refresh
+    // the low-stock alerts so the deleted product also leaves them.
+    final current = state.asData?.value ?? const <Product>[];
+    state = AsyncData([for (final p in current) if (p.id != id) p]);
+    ref.invalidate(lowStockProvider);
   }
 }
 

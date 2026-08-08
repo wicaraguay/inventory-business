@@ -308,7 +308,7 @@ class ProductsScreen extends ConsumerWidget {
         await showAppAlert(context,
             message: 'Producto eliminado.', kind: AlertKind.success);
       }
-    } on Exception catch (e) {
+    } on Object catch (e) {
       if (context.mounted) {
         await showAppAlert(context,
             message: 'No se pudo eliminar: $e', kind: AlertKind.error);
