@@ -105,8 +105,8 @@ class ProductsScreen extends ConsumerWidget {
           name: draft.name,
           sku: '${draft.skuPrefix}-${s.size}',
           detail: draft.color == null
-              ? 'talle ${s.size}'
-              : 'talle ${s.size} · ${draft.color}',
+              ? 'Talla ${s.size}'
+              : 'Talla ${s.size} · ${draft.color}',
           lowStockThreshold: threshold,
           salePrice: draft.salePrice,
           minPrice: draft.minPrice,
@@ -347,8 +347,8 @@ class ProductsScreen extends ConsumerWidget {
           name: product.name,
           sku: '$prefix-${s.size}',
           detail: color == null
-              ? 'talle ${s.size}'
-              : 'talle ${s.size} · $color',
+              ? 'Talla ${s.size}'
+              : 'Talla ${s.size} · $color',
           lowStockThreshold: threshold,
           salePrice: product.salePrice,
           minPrice: product.minPrice,

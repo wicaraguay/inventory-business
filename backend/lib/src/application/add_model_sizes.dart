@@ -20,7 +20,7 @@ class AddModelSizes {
     final seenSkus = <String>{};
     for (final item in items) {
       if (item.sku.trim().isEmpty) {
-        throw DomainException('Cada talle necesita un código (SKU)');
+        throw DomainException('Cada talla necesita un código (SKU)');
       }
       if (!seenSkus.add(item.sku.trim())) {
         throw DomainException('Talla repetida en la carga: ${item.sku}');

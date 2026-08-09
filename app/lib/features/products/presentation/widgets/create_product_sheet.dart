@@ -201,7 +201,7 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
                     TextFormField(
                       controller: _detail,
                       decoration: const InputDecoration(
-                        labelText: 'Detalle (opcional) — ej. talle 40 · negro',
+                        labelText: 'Detalle (opcional) — ej. Talla 40 · negro',
                       ),
                     ),
                     // The SKU is auto-generated from the name and goes into the

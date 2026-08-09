@@ -19,7 +19,7 @@ class CreateProductsBulk {
         throw DomainException('El nombre del modelo es obligatorio');
       }
       if (item.sku.trim().isEmpty) {
-        throw DomainException('Cada talle necesita un código (SKU)');
+        throw DomainException('Cada talla necesita un código (SKU)');
       }
       if (!seenSkus.add(item.sku.trim())) {
         throw DomainException('Código repetido: ${item.sku}');
