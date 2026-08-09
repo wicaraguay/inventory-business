@@ -13,4 +13,9 @@ class HttpDashboardRepository implements DashboardRepository {
     final items = (res.data!['lowStock'] as List).cast<Map<String, dynamic>>();
     return items.map(LowStockItem.fromJson).toList();
   }
+
+  @override
+  Future<void> snoozeAlert(String productId) async {
+    await _dio.post<void>('/alerts/snooze', data: {'productId': productId});
+  }
 }

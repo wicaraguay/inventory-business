@@ -10,10 +10,15 @@ class PostgresLowStockRepository implements LowStockRepository {
 
   @override
   Future<List<LowStockProduct>> lowStock() async {
+    // Skip products snoozed ("marcado leído") in the last 3 days; after that
+    // they reappear if still low.
     final result = await _db.execute('''
-      SELECT product_id, name, detail, sku, current_stock, low_stock_threshold
-      FROM low_stock_products
-      ORDER BY current_stock ASC
+      SELECT lsp.product_id, lsp.name, lsp.detail, lsp.sku,
+             lsp.current_stock, lsp.low_stock_threshold
+      FROM low_stock_products lsp
+      LEFT JOIN low_stock_snoozes s ON s.product_id = lsp.product_id
+      WHERE s.snoozed_at IS NULL OR s.snoozed_at < now() - interval '3 days'
+      ORDER BY lsp.current_stock ASC
     ''');
 
     return result
@@ -28,5 +33,17 @@ class PostgresLowStockRepository implements LowStockRepository {
           ),
         )
         .toList();
+  }
+
+  @override
+  Future<void> snooze(String productId) async {
+    await _db.execute(
+      Sql.named('''
+        INSERT INTO low_stock_snoozes (product_id, snoozed_at)
+        VALUES (@id, now())
+        ON CONFLICT (product_id) DO UPDATE SET snoozed_at = now()
+      '''),
+      parameters: {'id': productId},
+    );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:inventy_backend/src/application/authorize_owner.dart';
 import 'package:inventy_backend/src/application/business_logo.dart';
+import 'package:inventy_backend/src/application/cash_close.dart';
 import 'package:inventy_backend/src/application/change_password.dart';
 import 'package:inventy_backend/src/application/create_product.dart';
 import 'package:inventy_backend/src/application/create_products_bulk.dart';
@@ -24,6 +25,7 @@ import 'package:inventy_backend/src/application/register_sale.dart';
 import 'package:inventy_backend/src/application/register_stock_entry.dart';
 import 'package:inventy_backend/src/application/register_stock_exit.dart';
 import 'package:inventy_backend/src/application/save_product_image.dart';
+import 'package:inventy_backend/src/application/snooze_low_stock.dart';
 import 'package:inventy_backend/src/application/update_product.dart';
 import 'package:inventy_backend/src/application/update_settings.dart';
 import 'package:inventy_backend/src/application/update_user.dart';
@@ -31,6 +33,7 @@ import 'package:inventy_backend/src/domain/entities/user.dart';
 import 'package:inventy_backend/src/infrastructure/auth/jwt_service.dart';
 import 'package:inventy_backend/src/infrastructure/auth/password_hasher.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/database.dart';
+import 'package:inventy_backend/src/infrastructure/postgres/postgres_cash_repository.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/postgres_low_stock_repository.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/postgres_movement_history_repository.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/postgres_product_image_repository.dart';
@@ -114,6 +117,27 @@ Handler middleware(Handler handler) {
         provider<Future<DetectLowStock>>(
           (_) async => DetectLowStock(
             PostgresLowStockRepository(await Database.connection()),
+          ),
+        ),
+      )
+      .use(
+        provider<Future<SnoozeLowStock>>(
+          (_) async => SnoozeLowStock(
+            PostgresLowStockRepository(await Database.connection()),
+          ),
+        ),
+      )
+      .use(
+        provider<Future<SaveCashClose>>(
+          (_) async => SaveCashClose(
+            PostgresCashRepository(await Database.connection()),
+          ),
+        ),
+      )
+      .use(
+        provider<Future<ListCashCloses>>(
+          (_) async => ListCashCloses(
+            PostgresCashRepository(await Database.connection()),
           ),
         ),
       )
@@ -277,6 +301,7 @@ bool _isOwnerOnly(RequestContext context) {
   }
   if (p == '/sales' && m == HttpMethod.get) return true;
   if (p.startsWith('/sales/series')) return true;
+  if (p == '/cash' || p.startsWith('/cash/')) return true;
   // Deleting a product outright is destructive: owner only (an inventory helper
   // can create/edit, but not delete). NOT the image sub-route (that's just its
   // photo, part of managing inventory).

@@ -6,10 +6,22 @@ import 'package:inventy_app/shared/ui/atoms/status_pill.dart';
 /// Presentational: the low-stock alerts card. [shrinkWrap] sizes it to its
 /// content (for the bottom sheet); otherwise it fills its space (dashboard).
 class LowStockList extends StatelessWidget {
-  const LowStockList({required this.items, this.shrinkWrap = false, super.key});
+  const LowStockList({
+    required this.items,
+    this.shrinkWrap = false,
+    this.onTap,
+    this.onDismiss,
+    super.key,
+  });
 
   final List<LowStockItem> items;
   final bool shrinkWrap;
+
+  /// Tap a row (e.g. to jump to the product in the inventory).
+  final void Function(LowStockItem item)? onTap;
+
+  /// Mark a row as read (snooze it).
+  final void Function(LowStockItem item)? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -20,7 +32,8 @@ class LowStockList extends StatelessWidget {
             physics: shrinkWrap ? const ClampingScrollPhysics() : null,
             itemCount: items.length,
             separatorBuilder: (_, __) => const Divider(height: 1),
-            itemBuilder: (_, i) => _Row(item: items[i]),
+            itemBuilder: (_, i) =>
+                _Row(item: items[i], onTap: onTap, onDismiss: onDismiss),
           );
     return Card(
       child: Column(
@@ -43,9 +56,11 @@ class LowStockList extends StatelessWidget {
 }
 
 class _Row extends StatelessWidget {
-  const _Row({required this.item});
+  const _Row({required this.item, this.onTap, this.onDismiss});
 
   final LowStockItem item;
+  final void Function(LowStockItem item)? onTap;
+  final void Function(LowStockItem item)? onDismiss;
 
   @override
   Widget build(BuildContext context) {
@@ -55,56 +70,68 @@ class _Row extends StatelessWidget {
     final muted = AppColors.onSurface.withValues(alpha: 0.6);
     final hasDetail = item.detail != null && item.detail!.isNotEmpty;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      child: Row(
-        children: [
-          Icon(
-            out ? Icons.error_outline : Icons.warning_amber_rounded,
-            color: color,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return InkWell(
+      onTap: onTap == null ? null : () => onTap!(item),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        child: Row(
+          children: [
+            Icon(
+              out ? Icons.error_outline : Icons.warning_amber_rounded,
+              color: color,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    item.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    hasDetail
+                        ? '${item.detail}  ·  umbral ${item.threshold}'
+                        : 'Umbral ${item.threshold}',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: muted),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
               mainAxisSize: MainAxisSize.min,
               children: [
+                StatusPill(status),
+                const SizedBox(height: 4),
                 Text(
-                  item.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                const SizedBox(height: 2),
-                Text(
-                  hasDetail
-                      ? '${item.detail}  ·  umbral ${item.threshold}'
-                      : 'Umbral ${item.threshold}',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(fontSize: 12, color: muted),
+                  out ? 'Agotado' : 'Quedan ${item.currentStock}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: muted,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 12),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              StatusPill(status),
-              const SizedBox(height: 4),
-              Text(
-                out ? 'Agotado' : 'Quedan ${item.currentStock}',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: muted,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ],
+            if (onDismiss != null)
+              IconButton(
+                tooltip: 'Marcar como leído',
+                visualDensity: VisualDensity.compact,
+                icon: Icon(Icons.check_circle_outline, color: muted),
+                onPressed: () => onDismiss!(item),
+              )
+            else
+              const SizedBox(width: 8),
+          ],
+        ),
       ),
     );
   }

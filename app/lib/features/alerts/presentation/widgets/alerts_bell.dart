@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:inventy_app/features/alerts/presentation/alerts_providers.dart';
 import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/features/dashboard/presentation/dashboard_providers.dart';
@@ -51,7 +52,21 @@ class _AlertsSheet extends ConsumerWidget {
           maxHeight: MediaQuery.of(context).size.height * 0.7,
         ),
         child: async.when(
-          data: (items) => LowStockList(items: items, shrinkWrap: true),
+          data: (items) => LowStockList(
+            items: items,
+            shrinkWrap: true,
+            onTap: (_) {
+              // Close the sheet and jump to the inventory to fix the stock.
+              Navigator.of(context).pop();
+              context.go('/inventory');
+            },
+            onDismiss: (item) async {
+              await ref
+                  .read(dashboardRepositoryProvider)
+                  .snoozeAlert(item.productId);
+              ref.invalidate(lowStockProvider);
+            },
+          ),
           loading: () => const Padding(
             padding: EdgeInsets.all(32),
             child: Center(child: CircularProgressIndicator()),
