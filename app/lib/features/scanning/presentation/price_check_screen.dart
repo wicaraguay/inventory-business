@@ -8,9 +8,9 @@ import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/product_image.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-/// Fast price check for the counter: scan a shelf QR and instantly see the
-/// price (and the minimum, for haggling) + the photo. Read-only, no stock —
-/// built so an employee can quote a walk-in customer in one second.
+/// Fast price check for the counter: scan a shelf QR and see the price, that
+/// size, its stock, the model's other sizes with stock, and the photo. The
+/// camera is a bounded box (like the register) with the info below it.
 class PriceCheckScreen extends ConsumerStatefulWidget {
   const PriceCheckScreen({super.key});
 
@@ -65,118 +65,154 @@ class _PriceCheckScreenState extends ConsumerState<PriceCheckScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: MobileScanner(
-            controller: _controller,
-            onDetect: _onDetect,
-            errorBuilder: (context, error) => _cameraUnavailable(),
-          ),
-        ),
-        const Center(
-          child: Icon(Icons.qr_code_scanner, size: 120, color: Colors.white24),
-        ),
-        Align(
-          alignment: Alignment.bottomCenter,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: _result(),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _result() {
-    if (_found == null && _notFoundCode == null) {
-      return _card(
-        color: Colors.black.withValues(alpha: 0.6),
-        child: const Text(
-          'Escaneá el QR del producto para ver su precio.',
-          textAlign: TextAlign.center,
-          style: TextStyle(color: Colors.white),
-        ),
-      );
-    }
-    if (_notFoundCode != null) {
-      return _card(
-        color: AppColors.danger,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.error_outline, color: Colors.white, size: 32),
-            const SizedBox(height: 8),
-            Text(
-              'Sin producto para el código:\n$_notFoundCode',
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white),
-            ),
-          ],
-        ),
-      );
-    }
-    final p = _found!;
-    return _card(
-      color: AppColors.surface,
-      child: Row(
+    final muted = TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6));
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          if (p.hasImage) ...[
-            ProductThumbnail(product: p, size: 88),
-            const SizedBox(width: 14),
-          ],
-          Expanded(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  p.name,
-                  style:
-                      const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                if (p.detail != null && p.detail!.isNotEmpty)
-                  Text(
-                    p.detail!,
-                    style: TextStyle(
-                        color: AppColors.onSurface.withValues(alpha: 0.6)),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+          Text('Consultar precio',
+              style: Theme.of(context).textTheme.headlineLarge),
+          const SizedBox(height: 4),
+          Text('Escaneá el QR del zapato para ver precio, stock y tallas.',
+              style: muted),
+          const SizedBox(height: 12),
+          // Camera sized like the register (bounded box), not full screen.
+          ClipRRect(
+            borderRadius: BorderRadius.circular(16),
+            child: SizedBox(
+              height: 260,
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  MobileScanner(
+                    controller: _controller,
+                    onDetect: _onDetect,
+                    errorBuilder: (context, error) => _cameraUnavailable(),
                   ),
-                const SizedBox(height: 8),
-                Text(
-                  p.salePrice == null ? 'Sin precio cargado' : money(p.salePrice),
-                  style: TextStyle(
-                    fontSize: 34,
-                    fontWeight: FontWeight.w800,
-                    color: p.salePrice == null
-                        ? AppColors.onSurface.withValues(alpha: 0.5)
-                        : AppColors.primary,
-                    height: 1.1,
+                  const Center(
+                    child: Icon(Icons.qr_code_scanner,
+                        size: 90, color: Colors.white24),
                   ),
-                ),
-                if (p.minPrice != null)
-                  Text(
-                    'Mínimo ${money(p.minPrice)}',
-                    style: TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.onSurface.withValues(alpha: 0.7),
+                  if (_busy)
+                    const ColoredBox(
+                      color: Colors.black26,
+                      child: Center(child: CircularProgressIndicator()),
                     ),
-                  ),
-                const SizedBox(height: 8),
-                _stockChip(p),
-              ],
+                ],
+              ),
             ),
           ),
+          const SizedBox(height: 12),
+          Expanded(child: SingleChildScrollView(child: _result())),
         ],
       ),
     );
   }
 
-  /// Small colored badge telling the employee if there's stock to sell.
+  Widget _result() {
+    if (_found == null && _notFoundCode == null) {
+      return Text(
+        'Apuntá al QR para ver el precio.',
+        textAlign: TextAlign.center,
+        style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
+      );
+    }
+    if (_notFoundCode != null) {
+      return Card(
+        color: AppColors.danger.withValues(alpha: 0.1),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              const Icon(Icons.error_outline, color: AppColors.danger),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text('Sin producto para el código:\n$_notFoundCode'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final p = _found!;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (p.hasImage) ...[
+                  ProductThumbnail(product: p, size: 96),
+                  const SizedBox(width: 14),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        p.name,
+                        style: const TextStyle(
+                            fontSize: 18, fontWeight: FontWeight.w700),
+                      ),
+                      if (p.detail != null && p.detail!.isNotEmpty)
+                        Text(
+                          p.detail!,
+                          style: TextStyle(
+                              fontSize: 15,
+                              color: AppColors.onSurface.withValues(alpha: 0.7)),
+                        ),
+                      const SizedBox(height: 8),
+                      Text(
+                        p.salePrice == null
+                            ? 'Sin precio cargado'
+                            : money(p.salePrice),
+                        style: TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.w800,
+                          height: 1.1,
+                          color: p.salePrice == null
+                              ? AppColors.onSurface.withValues(alpha: 0.5)
+                              : AppColors.primary,
+                        ),
+                      ),
+                      if (p.minPrice != null)
+                        Text('Mínimo ${money(p.minPrice)}',
+                            style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color:
+                                    AppColors.onSurface.withValues(alpha: 0.7))),
+                      const SizedBox(height: 8),
+                      _stockChip(p),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            if (p.availableSizes.length > 1) ...[
+              const Divider(height: 24),
+              Text('Tallas del modelo',
+                  style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.onSurface.withValues(alpha: 0.6))),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [for (final s in p.availableSizes) _sizeChip(s)],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _stockChip(Product p) {
     final threshold = ref.read(settingsProvider).defaultThreshold;
     final (color, label) = switch (p) {
@@ -185,25 +221,39 @@ class _PriceCheckScreenState extends ConsumerState<PriceCheckScreen> {
         (AppColors.warning, 'Quedan ${p.currentStock} (bajo)'),
       _ => (AppColors.success, 'Stock ${p.currentStock}'),
     };
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.15),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(color: color, fontWeight: FontWeight.w700),
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(999),
+        ),
+        child: Text(label,
+            style: TextStyle(color: color, fontWeight: FontWeight.w700)),
       ),
     );
   }
 
-  Widget _card({required Color color, required Widget child}) {
-    return ConstrainedBox(
-      constraints: const BoxConstraints(maxWidth: 460),
-      child: Card(
-        color: color,
-        child: Padding(padding: const EdgeInsets.all(16), child: child),
+  /// A chip for one size: label + stock. Muted/struck when out of stock.
+  Widget _sizeChip(ModelSize s) {
+    final out = s.currentStock <= 0;
+    final color =
+        out ? AppColors.onSurface.withValues(alpha: 0.4) : AppColors.success;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '${s.label} · ${s.currentStock}',
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
+          decoration: out ? TextDecoration.lineThrough : null,
+        ),
       ),
     );
   }
