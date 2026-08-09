@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/features/auth/presentation/login_screen.dart';
 import 'package:inventy_app/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:inventy_app/features/home/presentation/home_screen.dart';
 import 'package:inventy_app/features/movements/presentation/movements_screen.dart';
 import 'package:inventy_app/features/products/presentation/products_screen.dart';
 import 'package:inventy_app/features/sales/presentation/arqueo_screen.dart';
@@ -37,16 +38,16 @@ final routerProvider = Provider<GoRouter>((ref) {
   ref.listen<bool>(isAuthenticatedProvider, (_, __) => refresh.value++);
 
   return GoRouter(
-    initialLocation: '/inventory',
+    initialLocation: '/home',
     refreshListenable: refresh,
     redirect: (context, state) {
       final loggedIn = ref.read(isAuthenticatedProvider);
       final atLogin = state.matchedLocation == '/login';
       if (!loggedIn) return atLogin ? null : '/login';
-      if (atLogin) return '/inventory';
+      if (atLogin) return '/home';
       // Logged in but not the owner: keep employees out of owner-only screens.
       final isOwner = ref.read(currentUserProvider)?.isOwner ?? false;
-      if (!isOwner && _isOwnerOnly(state.matchedLocation)) return '/inventory';
+      if (!isOwner && _isOwnerOnly(state.matchedLocation)) return '/home';
       return null;
     },
     routes: [
@@ -55,6 +56,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) =>
             AppShell(location: state.uri.path, child: child),
         routes: [
+          GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
           GoRoute(
             path: '/dashboard',
             builder: (_, __) => const DashboardScreen(),

@@ -11,6 +11,7 @@ import 'package:inventy_app/shared/theme/app_colors.dart';
 typedef NavItem = ({IconData icon, String label, String path, bool ownerOnly});
 
 const navItems = <NavItem>[
+  (icon: Icons.home_outlined, label: 'Inicio', path: '/home', ownerOnly: false),
   (icon: Icons.dashboard_outlined, label: 'Dashboard', path: '/dashboard', ownerOnly: true),
   (icon: Icons.inventory_2_outlined, label: 'Inventario', path: '/inventory', ownerOnly: false),
   (icon: Icons.sell_outlined, label: 'Precio', path: '/price', ownerOnly: false),
