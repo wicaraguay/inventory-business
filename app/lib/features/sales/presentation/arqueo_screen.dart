@@ -69,10 +69,27 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
           Text('Arqueo de caja',
               style: Theme.of(context).textTheme.headlineLarge),
           const SizedBox(height: 4),
-          Text(
-            'Al cerrar el día, contá el efectivo y compará con lo que el sistema '
-            'espera. Guardá el cierre para tener el historial.',
-            style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
+          Card(
+            color: AppColors.primary.withValues(alpha: 0.06),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  const Icon(Icons.lightbulb_outline, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Para cerrar el día: contá la plata de la caja y ponela '
+                      'en "Efectivo contado". El sistema suma lo que abriste + '
+                      'lo que vendiste hoy y te dice si falta o sobra.',
+                      style: TextStyle(
+                          color: AppColors.onSurface.withValues(alpha: 0.75),
+                          fontSize: 13),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
           const SizedBox(height: 20),
           report.when(
@@ -100,8 +117,6 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
   Widget _body(BuildContext context, double ventasHoy, int countToday) {
     final fondo = _num(_fondo);
     final counted = _num(_contado);
-    final esperado = fondo + ventasHoy;
-    final diff = counted - esperado;
     final hasCounted = _contado.text.trim().isNotEmpty;
     final muted = TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6));
 
@@ -176,7 +191,7 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
             ),
           )
         else
-          _resultCard(esperado, counted, diff),
+          _resultCard(fondo, ventasHoy, counted),
         const SizedBox(height: 12),
         FilledButton.icon(
           onPressed: (!hasCounted || _saving) ? null : () => _save(ventasHoy),
@@ -199,22 +214,24 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
     );
   }
 
-  Widget _resultCard(double esperado, double counted, double diff) {
+  Widget _resultCard(double fondo, double ventas, double counted) {
+    final esperado = fondo + ventas;
+    final diff = counted - esperado;
     final (color, title, sub) = switch (diff) {
       _ when diff.abs() < 0.005 => (
           AppColors.success,
           'Caja cuadra ✓',
-          'El efectivo coincide con lo esperado.'
+          'La plata que contaste es exactamente la que debería haber.'
         ),
       _ when diff < 0 => (
           AppColors.danger,
           'Faltan ${money(-diff)}',
-          'Hay menos efectivo del que debería. Revisá.'
+          'Contaste menos de lo que debería haber en la caja. Revisá.'
         ),
       _ => (
           AppColors.warning,
           'Sobran ${money(diff)}',
-          'Hay más efectivo del esperado.'
+          'Hay más plata de la que debería. Puede ser un error de vuelto.'
         ),
     };
     return Card(
@@ -224,9 +241,14 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _line('Efectivo esperado', money(esperado)),
+            // The full math, in plain words, so the "why" is obvious.
+            _line('Abriste con (fondo)', money(fondo)),
             const SizedBox(height: 4),
-            _line('Efectivo contado', money(counted)),
+            _line('+ Vendiste hoy', money(ventas)),
+            const Divider(height: 20),
+            _line('= Deberías tener', money(esperado), bold: true),
+            const SizedBox(height: 4),
+            _line('Contaste en la caja', money(counted)),
             const Divider(height: 20),
             Text(title,
                 style: TextStyle(
@@ -234,7 +256,7 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
             const SizedBox(height: 4),
             Text(sub,
                 style: TextStyle(
-                    color: AppColors.onSurface.withValues(alpha: 0.7))),
+                    color: AppColors.onSurface.withValues(alpha: 0.75))),
           ],
         ),
       ),
@@ -288,10 +310,11 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
         '${d.month.toString().padLeft(2, '0')} '
         '${d.hour.toString().padLeft(2, '0')}:'
         '${d.minute.toString().padLeft(2, '0')}';
+    final esperado = c.openingFloat + c.salesTotal;
     return ListTile(
-      title: Text('$fecha  ·  ${money(c.counted)} contado'),
+      title: Text('Cierre del $fecha'),
       subtitle: Text(
-        'Ventas ${money(c.salesTotal)} · fondo ${money(c.openingFloat)}'
+        'Deberías ${money(esperado)} · contaste ${money(c.counted)}'
         '${c.closedBy != null ? ' · ${c.closedBy}' : ''}',
         style: const TextStyle(fontSize: 12),
       ),
@@ -308,13 +331,17 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
     );
   }
 
-  Widget _line(String label, String value) => Row(
+  Widget _line(String label, String value, {bool bold = false}) => Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(label,
-              style:
-                  TextStyle(color: AppColors.onSurface.withValues(alpha: 0.7))),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+              style: TextStyle(
+                  color: AppColors.onSurface.withValues(alpha: 0.7),
+                  fontWeight: bold ? FontWeight.w700 : null)),
+          Text(value,
+              style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: bold ? 16 : 14)),
         ],
       );
 }
