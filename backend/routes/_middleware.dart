@@ -11,6 +11,7 @@ import 'package:inventy_backend/src/application/delete_product_image.dart';
 import 'package:inventy_backend/src/application/delete_user.dart';
 import 'package:inventy_backend/src/application/detect_low_stock.dart';
 import 'package:inventy_backend/src/application/find_product_by_code.dart';
+import 'package:inventy_backend/src/application/get_model_sizes.dart';
 import 'package:inventy_backend/src/application/get_product_image.dart';
 import 'package:inventy_backend/src/application/get_settings.dart';
 import 'package:inventy_backend/src/application/list_movements.dart';
@@ -83,6 +84,13 @@ Handler middleware(Handler handler) {
       .use(
         provider<Future<FindProductByCode>>(
           (_) async => FindProductByCode(
+            PostgresProductRepository(await Database.connection()),
+          ),
+        ),
+      )
+      .use(
+        provider<Future<GetModelSizes>>(
+          (_) async => GetModelSizes(
             PostgresProductRepository(await Database.connection()),
           ),
         ),

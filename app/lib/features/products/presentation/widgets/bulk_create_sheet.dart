@@ -16,17 +16,19 @@ typedef BulkDraft = ({
   String skuPrefix,
   double? salePrice,
   double? minPrice,
-  int threshold,
+  double? supplierPrice,
   List<BulkSizeDraft> sizes,
   Uint8List? imageBytes,
 });
 
-/// Form to register MANY sizes of the SAME model in one go ("carga por tallas"),
-/// keeping the flat model: each size becomes its own product with its own QR.
+/// The single "Agregar producto" flow: a model + its sizes (even one), one
+/// shared image, and shared prices. Each size becomes its own product with its
+/// own QR. The cost (supplier) price is shown only to the owner.
 class BulkCreateSheet extends StatefulWidget {
-  const BulkCreateSheet({this.initialThreshold = 0, super.key});
+  const BulkCreateSheet({this.showCost = false, super.key});
 
-  final int initialThreshold;
+  /// Whether to show the supplier (cost) price field — owner only.
+  final bool showCost;
 
   @override
   State<BulkCreateSheet> createState() => _BulkCreateSheetState();
@@ -40,8 +42,7 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
   final _prefix = TextEditingController();
   final _salePrice = TextEditingController();
   final _minPrice = TextEditingController();
-  late final _threshold =
-      TextEditingController(text: '${widget.initialThreshold}');
+  final _supplierPrice = TextEditingController();
 
   // Range generator inputs.
   final _from = TextEditingController(text: '34');
@@ -137,7 +138,7 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
     _prefix.dispose();
     _salePrice.dispose();
     _minPrice.dispose();
-    _threshold.dispose();
+    _supplierPrice.dispose();
     _from.dispose();
     _to.dispose();
     _qtyEach.dispose();
@@ -208,7 +209,7 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
       skuPrefix: _prefix.text.trim(),
       salePrice: sale,
       minPrice: min,
-      threshold: int.tryParse(_threshold.text.trim()) ?? 0,
+      supplierPrice: _price(_supplierPrice),
       sizes: [
         for (final e in _sizes.entries) (size: e.key, quantity: e.value),
       ],
@@ -230,12 +231,12 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text('Carga por tallas',
+              Text('Agregar producto',
                   style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 4),
               Text(
-                'Registrá todas las tallas de un mismo modelo de una sola vez. '
-                'Cada talla queda como un producto con su propio QR.',
+                'Cargá el modelo y sus tallas (aunque sea una). Se comparten '
+                'imagen y precios; cada talla queda con su propio QR.',
                 style: muted,
               ),
               const SizedBox(height: 12),
@@ -301,17 +302,20 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
                                 labelText: 'Precio mínimo'),
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _threshold,
-                            keyboardType: TextInputType.number,
-                            decoration:
-                                const InputDecoration(labelText: 'Umbral bajo'),
-                          ),
-                        ),
                       ],
                     ),
+                    if (widget.showCost) ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _supplierPrice,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Precio de proveedor (costo)',
+                          helperText: 'Privado — solo lo ves vos (el dueño).',
+                          helperStyle: muted,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     Text('Tallas',
                         style: Theme.of(context).textTheme.titleMedium),

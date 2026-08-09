@@ -13,6 +13,7 @@ abstract interface class ProductRepository {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   });
 
   /// Creates many products at once (all sizes of a model), each with its
@@ -27,6 +28,7 @@ abstract interface class ProductRepository {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   });
 
   Future<void> delete(String id);

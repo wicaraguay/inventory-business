@@ -4,10 +4,12 @@ import 'package:dart_frog/dart_frog.dart';
 import 'package:inventy_backend/src/application/create_product.dart';
 import 'package:inventy_backend/src/application/create_products_bulk.dart';
 import 'package:inventy_backend/src/application/find_product_by_code.dart';
+import 'package:inventy_backend/src/application/get_model_sizes.dart';
 import 'package:inventy_backend/src/application/list_products.dart';
 import 'package:inventy_backend/src/domain/entities/bulk_product_input.dart';
 import 'package:inventy_backend/src/domain/entities/product.dart';
 import 'package:inventy_backend/src/domain/entities/product_with_stock.dart';
+import 'package:inventy_backend/src/domain/entities/user.dart';
 import 'package:inventy_backend/src/domain/exceptions.dart';
 
 /// /products — POST creates; GET lists; GET ?code=<sku|barcode> resolves a scan.
@@ -19,6 +21,10 @@ Future<Response> onRequest(RequestContext context) async {
   };
 }
 
+/// Whether the current request may see the supplier (cost) price. Owner only.
+bool _isOwner(RequestContext context) =>
+    context.read<User?>()?.isOwner ?? false;
+
 Future<Response> _get(RequestContext context) async {
   final code = context.request.uri.queryParameters['code'];
   if (code != null) return _findByCode(context, code);
@@ -28,8 +34,13 @@ Future<Response> _get(RequestContext context) async {
 Future<Response> _list(RequestContext context) async {
   final useCase = await context.read<Future<ListProducts>>();
   final products = await useCase.call();
+  final owner = _isOwner(context);
   return Response.json(
-    body: {'products': products.map(_withStockJson).toList()},
+    body: {
+      'products': [
+        for (final p in products) _withStockJson(p, withSupplier: owner),
+      ],
+    },
   );
 }
 
@@ -43,7 +54,23 @@ Future<Response> _findByCode(RequestContext context, String code) async {
         body: {'error': 'No existe un producto con ese código'},
       );
     }
-    return Response.json(body: _withStockJson(found));
+    // The register never shows the cost price (withSupplier: false), but it does
+    // show the model's other available sizes.
+    final json = _withStockJson(found, withSupplier: false);
+    final modelId = found.product.modelId;
+    if (modelId != null) {
+      final sizes = await (await context.read<Future<GetModelSizes>>())
+          .call(modelId);
+      json['sizes'] = [
+        for (final s in sizes)
+          {
+            'productId': s.productId,
+            'label': s.label,
+            'currentStock': s.currentStock,
+          },
+      ];
+    }
+    return Response.json(body: json);
   } on DomainException catch (e) {
     return Response.json(
       statusCode: HttpStatus.badRequest,
@@ -66,10 +93,11 @@ Future<Response> _create(RequestContext context) async {
       detail: body['detail'] as String?,
       salePrice: (body['salePrice'] as num?)?.toDouble(),
       minPrice: (body['minPrice'] as num?)?.toDouble(),
+      supplierPrice: (body['supplierPrice'] as num?)?.toDouble(),
     );
     return Response.json(
       statusCode: HttpStatus.created,
-      body: _productJson(product, 0),
+      body: _productJson(product, 0, withSupplier: _isOwner(context)),
     );
   } on DomainException catch (e) {
     return Response.json(
@@ -92,15 +120,21 @@ Future<Response> _createBulk(
       lowStockThreshold: m['lowStockThreshold'] as int? ?? 0,
       salePrice: (m['salePrice'] as num?)?.toDouble(),
       minPrice: (m['minPrice'] as num?)?.toDouble(),
+      supplierPrice: (m['supplierPrice'] as num?)?.toDouble(),
       initialStock: m['initialStock'] as int? ?? 0,
     );
   }).toList();
 
   try {
     final created = await useCase.call(items);
+    final owner = _isOwner(context);
     return Response.json(
       statusCode: HttpStatus.created,
-      body: {'products': created.map((p) => _productJson(p, 0)).toList()},
+      body: {
+        'products': [
+          for (final p in created) _productJson(p, 0, withSupplier: owner),
+        ],
+      },
     );
   } on DomainException catch (e) {
     return Response.json(
@@ -110,11 +144,16 @@ Future<Response> _createBulk(
   }
 }
 
-Map<String, dynamic> _withStockJson(ProductWithStock p) => _productJson(
+Map<String, dynamic> _withStockJson(
+  ProductWithStock p, {
+  required bool withSupplier,
+}) =>
+    _productJson(
       p.product,
       p.currentStock,
       hasImage: p.hasImage,
       imageVersion: p.imageVersion,
+      withSupplier: withSupplier,
     );
 
 Map<String, dynamic> _productJson(
@@ -122,6 +161,7 @@ Map<String, dynamic> _productJson(
   int currentStock, {
   bool hasImage = false,
   int imageVersion = 0,
+  bool withSupplier = false,
 }) =>
     {
       'id': p.id,
@@ -131,7 +171,10 @@ Map<String, dynamic> _productJson(
       'lowStockThreshold': p.lowStockThreshold,
       'salePrice': p.salePrice,
       'minPrice': p.minPrice,
+      'modelId': p.modelId,
       'currentStock': currentStock,
       'hasImage': hasImage,
       'imageVersion': imageVersion,
+      // Cost price only for the owner; never leaves the server for employees.
+      if (withSupplier) 'supplierPrice': p.supplierPrice,
     };

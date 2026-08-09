@@ -15,6 +15,7 @@ class CreateProduct {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   }) async {
     if (name.trim().isEmpty) {
       throw DomainException('El nombre es obligatorio');
@@ -25,7 +26,9 @@ class CreateProduct {
     if (lowStockThreshold < 0) {
       throw DomainException('El umbral no puede ser negativo');
     }
-    if ((salePrice ?? 0) < 0 || (minPrice ?? 0) < 0) {
+    if ((salePrice ?? 0) < 0 ||
+        (minPrice ?? 0) < 0 ||
+        (supplierPrice ?? 0) < 0) {
       throw DomainException('Los precios no pueden ser negativos');
     }
     return _repository.create(
@@ -35,6 +38,7 @@ class CreateProduct {
       detail: detail,
       salePrice: salePrice,
       minPrice: minPrice,
+      supplierPrice: supplierPrice,
     );
   }
 }

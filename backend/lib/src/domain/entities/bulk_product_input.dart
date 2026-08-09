@@ -1,5 +1,5 @@
 /// One product to create in a bulk import (e.g. one size of a model),
-/// with its initial stock.
+/// with its initial stock. All items of one bulk load share a model + prices.
 class BulkProductInput {
   BulkProductInput({
     required this.name,
@@ -8,6 +8,7 @@ class BulkProductInput {
     this.lowStockThreshold = 0,
     this.salePrice,
     this.minPrice,
+    this.supplierPrice,
     this.initialStock = 0,
   });
 
@@ -17,5 +18,6 @@ class BulkProductInput {
   final int lowStockThreshold;
   final double? salePrice;
   final double? minPrice;
+  final double? supplierPrice;
   final int initialStock;
 }

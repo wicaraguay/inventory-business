@@ -17,22 +17,25 @@ typedef NewProduct = ({
   int initialStock,
   double? salePrice,
   double? minPrice,
+  double? supplierPrice,
   Uint8List? imageBytes,
   bool removeImage,
 });
 
-/// Form to create OR edit a product. If [product] is given, it's edit mode
-/// (fields prefilled). Returns a NewProduct on submit.
+/// Form to edit a product (fields prefilled). Returns a NewProduct on submit.
+/// The supplier (cost) price is shown only when [showCost] (owner).
 class CreateProductSheet extends StatefulWidget {
   const CreateProductSheet({
     required this.apiBaseUrl,
     this.initialThreshold = 0,
+    this.showCost = false,
     this.product,
     super.key,
   });
 
   final String apiBaseUrl;
   final int initialThreshold;
+  final bool showCost;
   final Product? product;
 
   @override
@@ -50,6 +53,8 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
       TextEditingController(text: _fmt(widget.product?.salePrice));
   late final _minPrice =
       TextEditingController(text: _fmt(widget.product?.minPrice));
+  late final _supplierPrice =
+      TextEditingController(text: _fmt(widget.product?.supplierPrice));
   late final _threshold = TextEditingController(
     text: '${widget.product?.lowStockThreshold ?? widget.initialThreshold}',
   );
@@ -88,6 +93,7 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
     _sku.dispose();
     _salePrice.dispose();
     _minPrice.dispose();
+    _supplierPrice.dispose();
     _threshold.dispose();
     _initialStock.dispose();
     super.dispose();
@@ -145,6 +151,7 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
       initialStock: int.tryParse(_initialStock.text.trim()) ?? 0,
       salePrice: _price(_salePrice),
       minPrice: _price(_minPrice),
+      supplierPrice: _price(_supplierPrice),
       imageBytes: _imageBytes,
       removeImage: _removeImage,
     ));
@@ -228,6 +235,17 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
                         ),
                       ],
                     ),
+                    if (widget.showCost) ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _supplierPrice,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Precio de proveedor (costo)',
+                          helperText: 'Privado — solo lo ve el dueño.',
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     if (!isEdit) ...[
                       TextFormField(

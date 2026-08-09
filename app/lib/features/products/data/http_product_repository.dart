@@ -25,6 +25,7 @@ class HttpProductRepository implements ProductRepository {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   }) async {
     final res = await _dio.post<Map<String, dynamic>>(
       '/products',
@@ -35,6 +36,7 @@ class HttpProductRepository implements ProductRepository {
         if (detail != null) 'detail': detail,
         if (salePrice != null) 'salePrice': salePrice,
         if (minPrice != null) 'minPrice': minPrice,
+        if (supplierPrice != null) 'supplierPrice': supplierPrice,
       },
     );
     return Product.fromJson(res.data!);
@@ -59,6 +61,7 @@ class HttpProductRepository implements ProductRepository {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   }) async {
     await _dio.put<void>(
       '/products/$id',
@@ -66,9 +69,10 @@ class HttpProductRepository implements ProductRepository {
         'name': name,
         'sku': sku,
         'lowStockThreshold': lowStockThreshold,
-        if (detail != null) 'detail': detail,
-        if (salePrice != null) 'salePrice': salePrice,
-        if (minPrice != null) 'minPrice': minPrice,
+        'detail': detail,
+        'salePrice': salePrice,
+        'minPrice': minPrice,
+        'supplierPrice': supplierPrice,
       },
     );
   }

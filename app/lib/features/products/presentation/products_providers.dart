@@ -28,6 +28,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
     int initialStock = 0,
     Uint8List? imageBytes,
   }) async {
@@ -39,6 +40,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
       detail: detail,
       salePrice: salePrice,
       minPrice: minPrice,
+      supplierPrice: supplierPrice,
     );
     // Stock is derived from movements: seed it with an initial entry.
     if (initialStock > 0) {
@@ -73,6 +75,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
     Uint8List? imageBytes,
     bool removeImage = false,
   }) async {
@@ -85,6 +88,7 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
       detail: detail,
       salePrice: salePrice,
       minPrice: minPrice,
+      supplierPrice: supplierPrice,
     );
     if (imageBytes != null) {
       await repo.uploadImage(id, imageBytes);

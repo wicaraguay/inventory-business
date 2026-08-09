@@ -1,5 +1,6 @@
 /// A sellable item (flat model). Each product is one thing you count —
-/// e.g. "Botín de cuero" with detail "talle 40 · negro". No variants.
+/// e.g. "Botín de cuero" with detail "talle 40 · negro". Products that are
+/// sizes of the same model share a [modelId].
 class Product {
   Product({
     required this.id,
@@ -9,6 +10,8 @@ class Product {
     this.detail,
     this.salePrice,
     this.minPrice,
+    this.supplierPrice,
+    this.modelId,
   });
 
   final String id;
@@ -22,4 +25,10 @@ class Product {
 
   /// Minimum ("último") price you'd sell it for. Null if not set.
   final double? minPrice;
+
+  /// Cost paid to the supplier. OWNER-ONLY — never serialized for employees.
+  final double? supplierPrice;
+
+  /// Groups the sizes of the same model. Null only for legacy rows in memory.
+  final String? modelId;
 }

@@ -16,6 +16,7 @@ class UpdateProduct {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   }) async {
     if (id.trim().isEmpty) {
       throw DomainException('El producto es obligatorio');
@@ -29,7 +30,9 @@ class UpdateProduct {
     if (lowStockThreshold < 0) {
       throw DomainException('El umbral no puede ser negativo');
     }
-    if ((salePrice ?? 0) < 0 || (minPrice ?? 0) < 0) {
+    if ((salePrice ?? 0) < 0 ||
+        (minPrice ?? 0) < 0 ||
+        (supplierPrice ?? 0) < 0) {
       throw DomainException('Los precios no pueden ser negativos');
     }
     return _repository.update(
@@ -40,6 +43,7 @@ class UpdateProduct {
       detail: detail,
       salePrice: salePrice,
       minPrice: minPrice,
+      supplierPrice: supplierPrice,
     );
   }
 }

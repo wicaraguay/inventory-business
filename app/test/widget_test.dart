@@ -36,6 +36,7 @@ class _FakeProductRepository implements ProductRepository {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   }) async =>
       Product(id: 'x', name: name, sku: sku);
 
@@ -48,6 +49,7 @@ class _FakeProductRepository implements ProductRepository {
     String? detail,
     double? salePrice,
     double? minPrice,
+    double? supplierPrice,
   }) async {}
 
   @override

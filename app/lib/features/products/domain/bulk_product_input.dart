@@ -8,6 +8,7 @@ class BulkProductInput {
     this.lowStockThreshold = 0,
     this.salePrice,
     this.minPrice,
+    this.supplierPrice,
     this.initialStock = 0,
   });
 
@@ -17,6 +18,7 @@ class BulkProductInput {
   final int lowStockThreshold;
   final double? salePrice;
   final double? minPrice;
+  final double? supplierPrice;
   final int initialStock;
 
   Map<String, dynamic> toJson() => {
@@ -27,5 +29,6 @@ class BulkProductInput {
         if (detail != null) 'detail': detail,
         if (salePrice != null) 'salePrice': salePrice,
         if (minPrice != null) 'minPrice': minPrice,
+        if (supplierPrice != null) 'supplierPrice': supplierPrice,
       };
 }

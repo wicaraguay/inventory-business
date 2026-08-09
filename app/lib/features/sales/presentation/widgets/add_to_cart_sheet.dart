@@ -54,6 +54,29 @@ class _AddToCartSheetState extends State<AddToCartSheet> {
     super.dispose();
   }
 
+  /// A chip for one size of the model: label + stock. Muted/struck when out.
+  Widget _sizeChip(ModelSize s) {
+    final out = s.currentStock <= 0;
+    final color =
+        out ? AppColors.onSurface.withValues(alpha: 0.4) : AppColors.success;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        '${s.label} · ${s.currentStock}',
+        style: TextStyle(
+          color: color,
+          fontWeight: FontWeight.w600,
+          fontSize: 12,
+          decoration: out ? TextDecoration.lineThrough : null,
+        ),
+      ),
+    );
+  }
+
   void _submit() {
     if (!_formKey.currentState!.validate()) return;
     Navigator.of(context).pop((
@@ -123,6 +146,21 @@ class _AddToCartSheetState extends State<AddToCartSheet> {
             ],
             Text('Disponible: ${widget.maxQuantity}',
                 style: const TextStyle(fontWeight: FontWeight.w600)),
+            // Other sizes of the same model (only when scanned), so the seller
+            // can offer another number if the customer needs it.
+            if (p.availableSizes.length > 1) ...[
+              const SizedBox(height: 10),
+              Text('Tallas del modelo:',
+                  style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.onSurface.withValues(alpha: 0.6))),
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 6,
+                runSpacing: 6,
+                children: [for (final s in p.availableSizes) _sizeChip(s)],
+              ),
+            ],
             const SizedBox(height: 10),
             // One-tap price switch (e.g. lower to the minimum for a customer).
             Wrap(

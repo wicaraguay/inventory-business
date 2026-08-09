@@ -35,8 +35,7 @@ class ProductsScreen extends ConsumerWidget {
           _Header(
             count: products.asData?.value.length,
             owner: canManage,
-            onCreate: () => _openCreate(context, ref),
-            onBulkCreate: () => _openBulkCreate(context, ref),
+            onAdd: () => _openBulkCreate(context, ref),
             onPrintAll: () => _printAll(context, ref),
             onIdentify: () => Navigator.of(context).push(
               MaterialPageRoute<void>(builder: (_) => const IdentifyScreen()),
@@ -67,47 +66,19 @@ class ProductsScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _openCreate(BuildContext context, WidgetRef ref) async {
-    final result = await showModalBottomSheet<NewProduct>(
-      context: context,
-      isScrollControlled: true,
-      builder: (_) => CreateProductSheet(
-        apiBaseUrl: ref.read(apiBaseUrlProvider),
-        initialThreshold: ref.read(settingsProvider).defaultThreshold,
-      ),
-    );
-    if (result == null) return;
-    try {
-      await ref.read(productsProvider.notifier).create(
-            name: result.name,
-            sku: result.sku,
-            lowStockThreshold: result.threshold,
-            detail: result.detail,
-            salePrice: result.salePrice,
-            minPrice: result.minPrice,
-            initialStock: result.initialStock,
-            imageBytes: result.imageBytes,
-          );
-    } on Exception catch (e) {
-      if (context.mounted) {
-        await showAppAlert(context,
-            message: 'No se pudo crear: $e', kind: AlertKind.error);
-      }
-    }
-  }
-
   Future<void> _openBulkCreate(BuildContext context, WidgetRef ref) async {
+    final isOwner = ref.read(currentUserProvider)?.isOwner ?? false;
     final draft = await showModalBottomSheet<BulkDraft>(
       context: context,
       isScrollControlled: true,
-      builder: (_) => BulkCreateSheet(
-        initialThreshold: ref.read(settingsProvider).defaultThreshold,
-      ),
+      builder: (_) => BulkCreateSheet(showCost: isOwner),
     );
     if (draft == null) return;
 
-    // Each size becomes its own flat product: SKU = prefix-size,
-    // detail = "talle N" (+ color), initial stock = pairs of that size.
+    // Each size becomes its own flat product (sharing a model): SKU = prefix-size,
+    // detail = "talle N" (+ color), initial stock = pairs of that size. The
+    // low-stock threshold is global now, so it's the same for all.
+    final threshold = ref.read(settingsProvider).defaultThreshold;
     final items = [
       for (final s in draft.sizes)
         BulkProductInput(
@@ -116,9 +87,10 @@ class ProductsScreen extends ConsumerWidget {
           detail: draft.color == null
               ? 'talle ${s.size}'
               : 'talle ${s.size} · ${draft.color}',
-          lowStockThreshold: draft.threshold,
+          lowStockThreshold: threshold,
           salePrice: draft.salePrice,
           minPrice: draft.minPrice,
+          supplierPrice: draft.supplierPrice,
           initialStock: s.quantity,
         ),
     ];
@@ -251,6 +223,7 @@ class ProductsScreen extends ConsumerWidget {
       isScrollControlled: true,
       builder: (_) => CreateProductSheet(
         apiBaseUrl: ref.read(apiBaseUrlProvider),
+        showCost: ref.read(currentUserProvider)?.isOwner ?? false,
         product: product,
       ),
     );
@@ -264,6 +237,7 @@ class ProductsScreen extends ConsumerWidget {
             detail: result.detail,
             salePrice: result.salePrice,
             minPrice: result.minPrice,
+            supplierPrice: result.supplierPrice,
             imageBytes: result.imageBytes,
             removeImage: result.removeImage,
           );
@@ -329,16 +303,14 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.count,
     required this.owner,
-    required this.onCreate,
-    required this.onBulkCreate,
+    required this.onAdd,
     required this.onPrintAll,
     required this.onIdentify,
   });
 
   final int? count;
   final bool owner;
-  final VoidCallback onCreate;
-  final VoidCallback onBulkCreate;
+  final VoidCallback onAdd;
   final VoidCallback onPrintAll;
   final VoidCallback onIdentify;
 
@@ -359,15 +331,11 @@ class _Header extends StatelessWidget {
       ],
     );
 
-    final newProduct = FilledButton.icon(
-      onPressed: onCreate,
+    // The one add flow: a model + its sizes (even one).
+    final add = FilledButton.icon(
+      onPressed: onAdd,
       icon: const Icon(Icons.add),
-      label: const Text('Nuevo producto'),
-    );
-    final bulk = OutlinedButton.icon(
-      onPressed: onBulkCreate,
-      icon: const Icon(Icons.grid_view),
-      label: const Text('Carga por tallas'),
+      label: const Text('Agregar producto'),
     );
     final printAll = OutlinedButton.icon(
       onPressed: hasProducts ? onPrintAll : null,
@@ -385,16 +353,13 @@ class _Header extends StatelessWidget {
       builder: (context, c) {
         if (c.maxWidth < 640) {
           // Phone: title, then full-width buttons ordered by importance.
-          // Big, aligned, easy-to-tap targets.
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               titleBlock,
               const SizedBox(height: 16),
               if (owner) ...[
-                SizedBox(height: 48, child: newProduct),
-                const SizedBox(height: 8),
-                SizedBox(height: 44, child: bulk),
+                SizedBox(height: 48, child: add),
                 const SizedBox(height: 8),
                 SizedBox(height: 44, child: printAll),
                 const SizedBox(height: 8),
@@ -417,7 +382,7 @@ class _Header extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   identify,
-                  if (owner) ...[printAll, bulk, newProduct],
+                  if (owner) ...[printAll, add],
                 ],
               ),
             ),
@@ -447,7 +412,7 @@ class _Empty extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             canCreate
-                ? 'Creá el primero con "Nuevo producto".'
+                ? 'Creá el primero con "Agregar producto".'
                 : 'Todavía no hay productos cargados.',
             style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
           ),

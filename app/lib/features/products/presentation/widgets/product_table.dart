@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
+import 'package:inventy_app/shared/format.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/atoms/status_pill.dart';
 import 'package:inventy_app/shared/ui/product_image.dart';
@@ -163,6 +164,12 @@ class _MobileRow extends StatelessWidget {
                       style: TextStyle(
                           color: muted, fontWeight: FontWeight.w600),
                     ),
+                    // Cost: only ever present for the owner (API hides it).
+                    if (product.supplierPrice != null) ...[
+                      const SizedBox(width: 8),
+                      Text('· Costo ${money(product.supplierPrice)}',
+                          style: TextStyle(color: muted, fontSize: 12)),
+                    ],
                   ],
                 ),
               ],
@@ -226,14 +233,29 @@ class _DataRow extends StatelessWidget {
                     style: TextStyle(
                         color: AppColors.onSurface.withValues(alpha: 0.7)),
                   ),
-                Text(
-                  product.sku,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontFamily: 'monospace',
-                    fontSize: 12,
-                    color: AppColors.onSurface.withValues(alpha: 0.5),
-                  ),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        product.sku,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 12,
+                          color: AppColors.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                    ),
+                    // Cost: only ever present for the owner (API hides it).
+                    if (product.supplierPrice != null)
+                      Text(
+                        '  ·  Costo ${money(product.supplierPrice)}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.onSurface.withValues(alpha: 0.5),
+                        ),
+                      ),
+                  ],
                 ),
               ],
             ),
