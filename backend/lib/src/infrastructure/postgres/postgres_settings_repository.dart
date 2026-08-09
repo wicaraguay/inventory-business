@@ -74,6 +74,26 @@ class PostgresSettingsRepository implements SettingsRepository {
     );
   }
 
+  @override
+  Future<String?> discountPinHash() async {
+    final result = await _db.execute(
+      'SELECT discount_pin_hash FROM app_settings WHERE id = 1',
+    );
+    if (result.isEmpty) return null;
+    return result.first[0] as String?;
+  }
+
+  @override
+  Future<void> setDiscountPin(String pinHash) async {
+    await _db.execute(
+      Sql.named(
+        'UPDATE app_settings SET discount_pin_hash = @h, updated_at = now() '
+        'WHERE id = 1',
+      ),
+      parameters: {'h': pinHash},
+    );
+  }
+
   AppSettings _map(ResultRow row) => AppSettings(
         businessName: row[0]! as String,
         defaultThreshold: row[1]! as int,

@@ -14,4 +14,7 @@ abstract interface class SettingsRepository {
 
   /// Removes the business logo.
   Future<void> deleteLogo();
+
+  /// Sets/changes the discount PIN (owner-only).
+  Future<void> setDiscountPin(String pin);
 }

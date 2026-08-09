@@ -25,6 +25,7 @@ import 'package:inventy_backend/src/application/register_sale.dart';
 import 'package:inventy_backend/src/application/register_stock_entry.dart';
 import 'package:inventy_backend/src/application/register_stock_exit.dart';
 import 'package:inventy_backend/src/application/save_product_image.dart';
+import 'package:inventy_backend/src/application/set_discount_pin.dart';
 import 'package:inventy_backend/src/application/snooze_low_stock.dart';
 import 'package:inventy_backend/src/application/update_product.dart';
 import 'package:inventy_backend/src/application/update_settings.dart';
@@ -274,6 +275,15 @@ Handler middleware(Handler handler) {
         provider<Future<AuthorizeOwner>>(
           (_) async => AuthorizeOwner(
             PostgresUserRepository(await Database.connection()),
+            PostgresSettingsRepository(await Database.connection()),
+            PasswordHasher(),
+          ),
+        ),
+      )
+      .use(
+        provider<Future<SetDiscountPin>>(
+          (_) async => SetDiscountPin(
+            PostgresSettingsRepository(await Database.connection()),
             PasswordHasher(),
           ),
         ),

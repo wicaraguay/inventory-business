@@ -12,12 +12,12 @@ Future<Response> onRequest(RequestContext context) async {
   }
   final body = await context.request.json() as Map<String, dynamic>;
   final useCase = await context.read<Future<AuthorizeOwner>>();
-  final owner = await useCase.call(body['password'] as String? ?? '');
-  if (owner == null) {
+  final result = await useCase.call(body['password'] as String? ?? '');
+  if (!result.ok) {
     return Response.json(
       statusCode: HttpStatus.forbidden,
-      body: {'authorized': false, 'error': 'Clave incorrecta'},
+      body: {'authorized': false, 'error': 'PIN o clave incorrecta'},
     );
   }
-  return Response.json(body: {'authorized': true, 'by': owner.displayName});
+  return Response.json(body: {'authorized': true, 'by': result.by});
 }

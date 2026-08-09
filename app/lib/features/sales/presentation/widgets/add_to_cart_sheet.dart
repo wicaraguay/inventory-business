@@ -70,8 +70,8 @@ class _AddToCartSheetState extends ConsumerState<AddToCartSheet> {
           controller: ctrl,
           obscureText: true,
           autofocus: true,
-          decoration:
-              const InputDecoration(labelText: 'Contraseña del dueño'),
+          decoration: const InputDecoration(
+              labelText: 'PIN de descuento (o clave del dueño)'),
           onSubmitted: (v) => Navigator.of(ctx).pop(v),
         ),
         actions: [
@@ -92,15 +92,15 @@ class _AddToCartSheetState extends ConsumerState<AddToCartSheet> {
     final pass = await _askOwnerPassword();
     if (pass == null || pass.isEmpty) return;
     try {
-      final by = await ref.read(authRepositoryProvider).authorizeDiscount(pass);
+      final r = await ref.read(authRepositoryProvider).authorizeDiscount(pass);
       if (!mounted) return;
-      if (by == null) {
-        _snack('Clave incorrecta');
+      if (!r.ok) {
+        _snack('PIN o clave incorrecta');
         return;
       }
       setState(() {
         _unlocked = true;
-        _authorizedBy = by;
+        _authorizedBy = r.by; // null when the shared PIN was used
       });
     } catch (_) {
       if (mounted) _snack('No se pudo verificar (revisá la conexión).');
@@ -260,9 +260,12 @@ class _AddToCartSheetState extends ConsumerState<AddToCartSheet> {
                   ),
                 ],
               ),
-            if (_authorizedBy != null) ...[
+            if (_unlocked) ...[
               const SizedBox(height: 6),
-              Text('Descuento autorizado por $_authorizedBy',
+              Text(
+                  _authorizedBy != null
+                      ? 'Descuento autorizado por $_authorizedBy'
+                      : 'Descuento autorizado con PIN',
                   style: const TextStyle(
                       color: AppColors.success,
                       fontWeight: FontWeight.w600,

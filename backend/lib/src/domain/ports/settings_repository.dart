@@ -18,4 +18,9 @@ abstract interface class SettingsRepository {
   Future<void> saveLogo(Uint8List data, String contentType);
 
   Future<void> deleteLogo();
+
+  /// Bcrypt hash of the discount PIN (null if not set yet).
+  Future<String?> discountPinHash();
+
+  Future<void> setDiscountPin(String pinHash);
 }

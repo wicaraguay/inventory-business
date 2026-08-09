@@ -79,6 +79,9 @@ class SettingsController extends Notifier<Settings> {
     await ref.read(settingsRepositoryProvider).deleteLogo();
     await _refresh();
   }
+
+  Future<void> setDiscountPin(String pin) =>
+      ref.read(settingsRepositoryProvider).setDiscountPin(pin);
 }
 
 final settingsProvider =

@@ -19,6 +19,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late final TextEditingController _name;
   late final TextEditingController _threshold;
+  final _pin = TextEditingController();
 
   @override
   void initState() {
@@ -32,7 +33,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void dispose() {
     _name.dispose();
     _threshold.dispose();
+    _pin.dispose();
     super.dispose();
+  }
+
+  Future<void> _savePin() async {
+    final pin = _pin.text.trim();
+    if (pin.length < 4) {
+      _snack('El PIN debe tener al menos 4 dígitos');
+      return;
+    }
+    try {
+      await ref.read(settingsProvider.notifier).setDiscountPin(pin);
+      _pin.clear();
+      if (mounted) _snack('PIN de descuento guardado');
+    } on Object {
+      if (mounted) _snack('No se pudo guardar (revisá la conexión)');
+    }
   }
 
   Future<void> _saveName() async {
@@ -233,6 +250,38 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       _saveThreshold();
                     },
                     child: const Text('Guardar')),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          _SettingsCard(
+            title: 'PIN de descuento',
+            children: [
+              Text(
+                'Clave aparte (distinta de tu contraseña de ingreso) para '
+                'autorizar descuentos en Ventas. Podés compartirla con un '
+                'empleado de confianza y cambiarla cuando quieras.',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _pin,
+                obscureText: true,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Nuevo PIN (mínimo 4 dígitos)',
+                ),
+              ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerRight,
+                child: FilledButton(
+                  onPressed: _savePin,
+                  child: const Text('Guardar PIN'),
+                ),
               ),
             ],
           ),

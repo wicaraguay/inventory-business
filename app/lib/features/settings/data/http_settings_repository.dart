@@ -44,6 +44,11 @@ class HttpSettingsRepository implements SettingsRepository {
     await _dio.delete<void>('/settings/logo');
   }
 
+  @override
+  Future<void> setDiscountPin(String pin) async {
+    await _dio.put<void>('/settings/discount-pin', data: {'pin': pin});
+  }
+
   Settings _map(Map<String, dynamic> json) => Settings(
         businessName: json['businessName'] as String,
         defaultThreshold: json['defaultThreshold'] as int,
