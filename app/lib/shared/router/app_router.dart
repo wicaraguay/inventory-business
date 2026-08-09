@@ -6,6 +6,7 @@ import 'package:inventy_app/features/auth/presentation/login_screen.dart';
 import 'package:inventy_app/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:inventy_app/features/movements/presentation/movements_screen.dart';
 import 'package:inventy_app/features/products/presentation/products_screen.dart';
+import 'package:inventy_app/features/sales/presentation/arqueo_screen.dart';
 import 'package:inventy_app/features/sales/presentation/sales_screen.dart';
 import 'package:inventy_app/features/scanning/presentation/price_check_screen.dart';
 import 'package:inventy_app/features/scanning/presentation/scan_screen.dart';
@@ -19,6 +20,7 @@ import 'package:inventy_app/shared/ui/app_shell.dart';
 const _ownerOnlyPaths = {
   '/dashboard',
   '/sales',
+  '/cash',
   '/movements',
   '/users',
   '/settings',
@@ -67,6 +69,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, __) => const PriceCheckScreen(),
           ),
           GoRoute(path: '/sales', builder: (_, __) => const SalesScreen()),
+          GoRoute(path: '/cash', builder: (_, __) => const ArqueoScreen()),
           GoRoute(
             path: '/movements',
             builder: (_, __) => const MovementsScreen(),

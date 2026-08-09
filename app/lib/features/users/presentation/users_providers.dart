@@ -51,8 +51,10 @@ class UsersNotifier extends AsyncNotifier<List<AuthUser>> {
 
   Future<void> remove(String id) async {
     await ref.read(usersRepositoryProvider).delete(id);
-    ref.invalidateSelf();
-    await future;
+    // Drop it from the in-memory list rather than refetching (a refetch that
+    // errors could blank the screen — same fix as products).
+    final current = state.asData?.value ?? const <AuthUser>[];
+    state = AsyncData([for (final u in current) if (u.id != id) u]);
   }
 }
 

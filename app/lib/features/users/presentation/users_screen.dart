@@ -174,17 +174,17 @@ class UsersScreen extends ConsumerWidget {
   Future<void> _delete(BuildContext context, WidgetRef ref, AuthUser u) async {
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      builder: (dialogCtx) => AlertDialog(
         title: const Text('Eliminar usuario'),
         content: Text('¿Eliminar a "${u.displayName}"? No podrá volver a entrar.'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
             child: const Text('Cancelar'),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
-            onPressed: () => Navigator.of(context).pop(true),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
             child: const Text('Eliminar'),
           ),
         ],
@@ -197,7 +197,7 @@ class UsersScreen extends ConsumerWidget {
         await showAppAlert(context,
             message: 'Usuario eliminado.', kind: AlertKind.success);
       }
-    } on Exception catch (e) {
+    } on Object catch (e) {
       if (context.mounted) {
         await showAppAlert(context,
             message: 'No se pudo eliminar: $e', kind: AlertKind.error);
