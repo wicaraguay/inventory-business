@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/labels/data/label_printer.dart';
+import 'package:inventy_app/features/labels/presentation/label_selection_provider.dart';
 import 'package:inventy_app/features/scanning/presentation/identify_screen.dart';
 import 'package:inventy_app/features/labels/presentation/label_sheet.dart';
 import 'package:inventy_app/features/movements/domain/movement_repository.dart';
@@ -27,20 +28,31 @@ class ProductsScreen extends ConsumerWidget {
     final products = ref.watch(productsProvider);
     // Owner OR an employee the owner enabled for inventory management.
     final canManage = ref.watch(currentUserProvider)?.canManage ?? false;
+    final selection = ref.watch(labelSelectionProvider);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _Header(
-            count: products.asData?.value.length,
-            owner: canManage,
-            onAdd: () => _openBulkCreate(context, ref),
-            onPrintAll: () => _printAll(context, ref),
-            onIdentify: () => Navigator.of(context).push(
-              MaterialPageRoute<void>(builder: (_) => const IdentifyScreen()),
+          if (selection.active)
+            _SelectionBar(
+              count: selection.ids.length,
+              onCancel: () =>
+                  ref.read(labelSelectionProvider.notifier).cancel(),
+              onPrint: () => _printSelected(context, ref),
+            )
+          else
+            _Header(
+              count: products.asData?.value.length,
+              owner: canManage,
+              onAdd: () => _openBulkCreate(context, ref),
+              onPrintAll: () => _printAll(context, ref),
+              onSelect: () =>
+                  ref.read(labelSelectionProvider.notifier).start(),
+              onIdentify: () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const IdentifyScreen()),
+              ),
             ),
-          ),
           const SizedBox(height: 16),
           Expanded(
             child: products.when(
@@ -50,6 +62,11 @@ class ProductsScreen extends ConsumerWidget {
                       products: items,
                       threshold: ref.watch(settingsProvider).defaultThreshold,
                       readOnly: !canManage,
+                      selectionActive: selection.active,
+                      selectedIds: selection.ids,
+                      onToggleSelect: (product) => ref
+                          .read(labelSelectionProvider.notifier)
+                          .toggle(product.id),
                       onMovement: (product, isEntry) =>
                           _openMovement(context, ref, product, isEntry),
                       onLabel: (product) => _openLabel(context, product),
@@ -114,7 +131,7 @@ class ProductsScreen extends ConsumerWidget {
           kind: AlertKind.success,
         );
       }
-      // Print all the new labels in one PDF (fixed 8-column QR format).
+      // Print all the new labels in one PDF (fixed 12-column QR format).
       if (context.mounted) {
         await printProductLabels(created);
       }
@@ -161,6 +178,22 @@ class ProductsScreen extends ConsumerWidget {
     final products = ref.read(productsProvider).asData?.value ?? const [];
     if (products.isEmpty) return;
     await printProductLabels(products);
+  }
+
+  /// Print QR labels for just the products the user ticked. Same fixed
+  /// 12-column format, so each QR is the same size as a full sheet.
+  Future<void> _printSelected(BuildContext context, WidgetRef ref) async {
+    final selection = ref.read(labelSelectionProvider);
+    final all = ref.read(productsProvider).asData?.value ?? const <Product>[];
+    final chosen = [for (final p in all) if (selection.ids.contains(p.id)) p];
+    if (chosen.isEmpty) {
+      await showAppAlert(context,
+          message: 'Marcá al menos un producto para imprimir.',
+          kind: AlertKind.info);
+      return;
+    }
+    await printProductLabels(chosen);
+    ref.read(labelSelectionProvider.notifier).cancel();
   }
 
   Future<void> _openEdit(
@@ -255,6 +288,7 @@ class _Header extends StatelessWidget {
     required this.owner,
     required this.onAdd,
     required this.onPrintAll,
+    required this.onSelect,
     required this.onIdentify,
   });
 
@@ -262,6 +296,7 @@ class _Header extends StatelessWidget {
   final bool owner;
   final VoidCallback onAdd;
   final VoidCallback onPrintAll;
+  final VoidCallback onSelect;
   final VoidCallback onIdentify;
 
   @override
@@ -292,6 +327,12 @@ class _Header extends StatelessWidget {
       icon: const Icon(Icons.qr_code_2),
       label: const Text('Imprimir etiquetas'),
     );
+    // Pick a subset (e.g. just two shoes) and print only their QRs.
+    final select = OutlinedButton.icon(
+      onPressed: hasProducts ? onSelect : null,
+      icon: const Icon(Icons.checklist),
+      label: const Text('Elegir e imprimir'),
+    );
     // Available to everyone: scan a printed QR to see which shoe/size it is.
     final identify = OutlinedButton.icon(
       onPressed: onIdentify,
@@ -313,6 +354,8 @@ class _Header extends StatelessWidget {
                 const SizedBox(height: 8),
                 SizedBox(height: 44, child: printAll),
                 const SizedBox(height: 8),
+                SizedBox(height: 44, child: select),
+                const SizedBox(height: 8),
               ],
               SizedBox(height: 44, child: identify),
             ],
@@ -332,13 +375,54 @@ class _Header extends StatelessWidget {
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
                   identify,
-                  if (owner) ...[printAll, add],
+                  if (owner) ...[select, printAll, add],
                 ],
               ),
             ),
           ],
         );
       },
+    );
+  }
+}
+
+/// Replaces the header while picking products to print. Shows how many are
+/// ticked, plus Cancel and "Imprimir (N)".
+class _SelectionBar extends StatelessWidget {
+  const _SelectionBar({
+    required this.count,
+    required this.onCancel,
+    required this.onPrint,
+  });
+
+  final int count;
+  final VoidCallback onCancel;
+  final VoidCallback onPrint;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        IconButton(
+          onPressed: onCancel,
+          icon: const Icon(Icons.close),
+          tooltip: 'Cancelar',
+        ),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            count == 0
+                ? 'Marcá los productos a imprimir'
+                : '$count seleccionado(s)',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+        FilledButton.icon(
+          onPressed: count == 0 ? null : onPrint,
+          icon: const Icon(Icons.qr_code_2),
+          label: Text('Imprimir ($count)'),
+        ),
+      ],
     );
   }
 }

@@ -16,6 +16,9 @@ class ProductTable extends StatelessWidget {
     required this.onEdit,
     required this.onDelete,
     this.readOnly = false,
+    this.selectionActive = false,
+    this.selectedIds = const {},
+    this.onToggleSelect,
     super.key,
   });
 
@@ -30,6 +33,12 @@ class ProductTable extends StatelessWidget {
 
   /// Employees see stock but cannot act on it: no per-row actions menu.
   final bool readOnly;
+
+  /// When true, each row shows a checkbox and tapping it toggles the pick
+  /// (used to print a subset of QR labels). The per-row menu is hidden.
+  final bool selectionActive;
+  final Set<String> selectedIds;
+  final void Function(Product product)? onToggleSelect;
 
   StockStatus _status(Product p) {
     if (p.currentStock <= 0) return StockStatus.out;
@@ -56,7 +65,18 @@ class ProductTable extends StatelessWidget {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final product = products[i];
-                    final menu = readOnly
+                    // In selection mode the row is a big tap target that toggles
+                    // the pick; the actions menu is replaced by a checkbox.
+                    final selected = selectedIds.contains(product.id);
+                    final leading = selectionActive
+                        ? IgnorePointer(
+                            child: Checkbox(
+                              value: selected,
+                              onChanged: (_) {},
+                            ),
+                          )
+                        : null;
+                    final menu = (readOnly || selectionActive)
                         ? const SizedBox(width: 48)
                         : _RowMenu(
                             product: product,
@@ -65,19 +85,26 @@ class ProductTable extends StatelessWidget {
                             onEdit: onEdit,
                             onDelete: onDelete,
                           );
-                    return narrow
+                    final row = narrow
                         ? _MobileRow(
                             product: product,
                             status: _status(product),
                             zebra: i.isOdd,
                             menu: menu,
+                            leading: leading,
                           )
                         : _DataRow(
                             product: product,
                             status: _status(product),
                             zebra: i.isOdd,
                             menu: menu,
+                            leading: leading,
                           );
+                    if (!selectionActive) return row;
+                    return InkWell(
+                      onTap: () => onToggleSelect?.call(product),
+                      child: row,
+                    );
                   },
                 ),
               ),
@@ -119,12 +146,14 @@ class _MobileRow extends StatelessWidget {
     required this.status,
     required this.zebra,
     required this.menu,
+    this.leading,
   });
 
   final Product product;
   final StockStatus status;
   final bool zebra;
   final Widget menu;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
@@ -134,6 +163,7 @@ class _MobileRow extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(12, 10, 4, 10),
       child: Row(
         children: [
+          if (leading != null) leading!,
           ProductThumbnail(product: product, size: 48),
           const SizedBox(width: 12),
           Expanded(
@@ -189,21 +219,24 @@ class _DataRow extends StatelessWidget {
     required this.status,
     required this.zebra,
     required this.menu,
+    this.leading,
   });
 
   final Product product;
   final StockStatus status;
   final bool zebra;
   final Widget menu;
+  final Widget? leading;
 
   @override
   Widget build(BuildContext context) {
     return Container(
       height: 56,
       color: zebra ? AppColors.canvas : AppColors.surface,
-      padding: const EdgeInsets.only(left: 20, right: 4),
+      padding: EdgeInsets.only(left: leading != null ? 8 : 20, right: 4),
       child: Row(
         children: [
+          if (leading != null) ...[leading!, const SizedBox(width: 4)],
           Expanded(
             flex: 4,
             child: Row(

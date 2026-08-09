@@ -7,13 +7,19 @@ import 'package:printing/printing.dart';
 
 const _mm = PdfPageFormat.mm;
 
+/// The ONE QR-grid column count, so every label is the same size whether you
+/// print one, two, or the whole inventory. 12 keeps each QR ~10.4mm on A4 —
+/// noticeably smaller than the old 8-column (~17mm) yet still reliable to scan.
+const defaultLabelColumns = 12;
+
 /// How many label columns fit reasonably on an A4 sheet WITH text beside the QR.
 /// Beyond this the QR gets too small to scan comfortably.
 const maxLabelColumns = 5;
 
-/// QR-only labels are much narrower (no text), so more columns fit while the QR
-/// stays ~17mm — still comfortable to scan, with room to cut.
-const maxLabelColumnsQrOnly = 8;
+/// QR-only labels are just the code, so they pack tighter. 15 is the practical
+/// ceiling: beyond it the QR drops under ~7mm and gets unreliable to scan on
+/// non-laser printers.
+const maxLabelColumnsQrOnly = 15;
 
 /// One product label. By default it's JUST the QR (encoding the SKU), centered.
 /// With [showText] the name / detail / sku are printed beside it.
@@ -65,12 +71,12 @@ pw.Widget _labelBody(
   );
 }
 
-/// Print product labels in a single PDF as a fixed 8-column QR grid on A4 — the
-/// ONE label format, so every QR is the same size whether you print one or many.
-/// Cut along the borders.
+/// Print product labels in a single PDF as a fixed-column QR grid on A4 — the
+/// ONE label format, so every QR is the same size whether you print one, two,
+/// or the whole inventory. Cut along the borders.
 Future<void> printProductLabels(
   List<Product> products, {
-  int columns = 8,
+  int columns = defaultLabelColumns,
   bool showText = false,
 }) async {
   final doc = pw.Document();
@@ -79,28 +85,41 @@ Future<void> printProductLabels(
   const gapMm = 3.0;
   const usableWidthMm = 210 - pageMarginMm * 2; // A4 width - margins
   const usableHeightMm = 297 - pageMarginMm * 2; // A4 height - margins
-  const cellHeightMm = 28.0;
 
   final cols =
       columns.clamp(1, showText ? maxLabelColumns : maxLabelColumnsQrOnly);
   // Subtract a tiny safety margin so N columns + gaps stay STRICTLY under the
   // usable width — otherwise rounding pushes the last column to a new row
-  // (e.g. 5 columns rendered as 4).
-  final cellWidthMm =
-      (usableWidthMm - (cols - 1) * gapMm) / cols - 0.6;
-  final rowsPerPage = ((usableHeightMm + gapMm) / (cellHeightMm + gapMm)).floor();
-  final perPage = cols * rowsPerPage;
+  // (e.g. 12 columns rendered as 11).
+  final cellWidthMm = (usableWidthMm - (cols - 1) * gapMm) / cols - 0.6;
 
-  // QR size: with text it shares the cell (0.45 width); QR-only fills the cell,
-  // minus padding, so it never overflows even at 8 columns.
-  final qrSizeMm = showText
-      ? math.min(cellHeightMm - 4, cellWidthMm * 0.45).clamp(12.0, 20.0)
-      : math.min(cellHeightMm - 4, cellWidthMm - 4).clamp(11.0, 24.0);
+  // Inner padding between the cell border and the QR/text.
+  final padMm = showText ? 1.5 : 1.0;
+
+  // QR size and cell height depend on the mode:
+  // - With text: the cell is a fixed 28mm tall row; the QR shares the width.
+  // - QR-only: the QR FILLS the cell width (minus padding) and the cell is a
+  //   compact square, so nothing overflows even at 15 columns and we don't
+  //   waste vertical paper. At 12 cols → ~10.4mm QR; at 15 → ~7.1mm.
+  final double cellHeightMm;
+  final double qrSizeMm;
+  if (showText) {
+    cellHeightMm = 28.0;
+    qrSizeMm =
+        math.min(cellHeightMm - padMm * 2, cellWidthMm * 0.45).clamp(12.0, 20.0);
+  } else {
+    qrSizeMm = (cellWidthMm - padMm * 2).clamp(6.0, 24.0);
+    cellHeightMm = qrSizeMm + padMm * 2;
+  }
+
+  final rowsPerPage =
+      ((usableHeightMm + gapMm) / (cellHeightMm + gapMm)).floor();
+  final perPage = cols * rowsPerPage;
 
   pw.Widget cell(Product p) => pw.Container(
         width: cellWidthMm * _mm,
         height: cellHeightMm * _mm,
-        padding: pw.EdgeInsets.all(1.5 * _mm),
+        padding: pw.EdgeInsets.all(padMm * _mm),
         decoration: pw.BoxDecoration(
           border: pw.Border.all(width: 0.5, color: PdfColors.grey400),
         ),
