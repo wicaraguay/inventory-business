@@ -79,6 +79,16 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
+  /// Adopts a freshly re-issued session — used after you edit your OWN profile,
+  /// so the new name/role appears everywhere without re-logging in.
+  Future<void> adoptSession(AuthUser user, String token) async {
+    authToken = token;
+    final prefs = ref.read(sharedPreferencesProvider);
+    await prefs.setString(_kToken, token);
+    await prefs.setString(_kUser, jsonEncode(user.toJson()));
+    state = AuthState(user: user);
+  }
+
   Future<void> logout() async {
     authToken = null;
     final prefs = ref.read(sharedPreferencesProvider);

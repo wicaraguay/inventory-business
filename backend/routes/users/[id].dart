@@ -6,6 +6,7 @@ import 'package:inventy_backend/src/application/delete_user.dart';
 import 'package:inventy_backend/src/application/update_user.dart';
 import 'package:inventy_backend/src/domain/entities/user.dart';
 import 'package:inventy_backend/src/domain/exceptions.dart';
+import 'package:inventy_backend/src/infrastructure/auth/jwt_service.dart';
 
 /// /users/<id> — PUT edits the user, DELETE removes them. Owner-only.
 Future<Response> onRequest(RequestContext context, String id) async {
@@ -19,6 +20,7 @@ Future<Response> onRequest(RequestContext context, String id) async {
 Future<Response> _update(RequestContext context, String id) async {
   final body = await context.request.json() as Map<String, dynamic>;
   final useCase = await context.read<Future<UpdateUser>>();
+  final me = context.read<User?>();
   try {
     final user = await useCase.call(
       id: id,
@@ -28,7 +30,14 @@ Future<Response> _update(RequestContext context, String id) async {
       canManageInventory: body['canManageInventory'] as bool? ?? false,
       newPassword: body['newPassword'] as String?,
     );
-    return Response.json(body: user.toJson());
+    final json = user.toJson();
+    // The display name/role live inside the JWT. If you edited your OWN profile,
+    // re-issue the token so the change shows everywhere immediately (sidebar,
+    // /auth/me, and future cash-close attribution) without re-logging in.
+    if (me != null && me.id == user.id) {
+      json['token'] = JwtService().sign(user);
+    }
+    return Response.json(body: json);
   } on DomainException catch (e) {
     return Response.json(
       statusCode: HttpStatus.badRequest,

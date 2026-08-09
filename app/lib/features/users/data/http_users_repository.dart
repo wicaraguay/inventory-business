@@ -32,7 +32,9 @@ class HttpUsersRepository {
     return AuthUser.fromJson(res.data!);
   }
 
-  Future<AuthUser> update({
+  /// Updates a user. When you edit your OWN profile the backend returns a fresh
+  /// [token] (the display name lives in the JWT); it's null for other users.
+  Future<({AuthUser user, String? token})> update({
     required String id,
     required String username,
     required String role,
@@ -51,7 +53,10 @@ class HttpUsersRepository {
           'newPassword': newPassword,
       },
     );
-    return AuthUser.fromJson(res.data!);
+    return (
+      user: AuthUser.fromJson(res.data!),
+      token: res.data!['token'] as String?,
+    );
   }
 
   Future<void> delete(String id) async {

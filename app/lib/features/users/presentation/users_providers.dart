@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/auth/domain/auth_user.dart';
+import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/features/users/data/http_users_repository.dart';
 import 'package:inventy_app/shared/api/api_client.dart';
 
@@ -37,7 +38,7 @@ class UsersNotifier extends AsyncNotifier<List<AuthUser>> {
     required bool canManageInventory,
     String? newPassword,
   }) async {
-    await ref.read(usersRepositoryProvider).update(
+    final res = await ref.read(usersRepositoryProvider).update(
           id: id,
           username: username,
           role: role,
@@ -45,6 +46,11 @@ class UsersNotifier extends AsyncNotifier<List<AuthUser>> {
           canManageInventory: canManageInventory,
           newPassword: newPassword,
         );
+    // Editing your OWN profile returns a fresh token: adopt it so the sidebar
+    // and everything else show the new name/role right away.
+    if (res.token != null) {
+      await ref.read(authProvider.notifier).adoptSession(res.user, res.token!);
+    }
     ref.invalidateSelf();
     await future;
   }
