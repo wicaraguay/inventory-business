@@ -114,13 +114,9 @@ class ProductsScreen extends ConsumerWidget {
           kind: AlertKind.success,
         );
       }
-      // Print all the new labels in one PDF (one QR per size).
+      // Print all the new labels in one PDF (fixed 8-column QR format).
       if (context.mounted) {
-        final opts = await _askLabelOptions(context);
-        if (opts != null) {
-          await printProductLabels(created,
-              columns: opts.columns, showText: opts.withText);
-        }
+        await printProductLabels(created);
       }
     } on Exception catch (e) {
       if (context.mounted) {
@@ -163,54 +159,7 @@ class ProductsScreen extends ConsumerWidget {
   Future<void> _printAll(BuildContext context, WidgetRef ref) async {
     final products = ref.read(productsProvider).asData?.value ?? const [];
     if (products.isEmpty) return;
-    final opts = await _askLabelOptions(context);
-    if (opts == null) return;
-    await printProductLabels(products,
-        columns: opts.columns, showText: opts.withText);
-  }
-
-  /// Ask the label format: how many columns per A4 sheet, and whether to include
-  /// the product data (off by default → QR-only labels).
-  Future<({int columns, bool withText})?> _askLabelOptions(
-    BuildContext context,
-  ) {
-    var withText = false;
-    return showDialog<({int columns, bool withText})>(
-      context: context,
-      builder: (ctx) => StatefulBuilder(
-        builder: (ctx, setState) => SimpleDialog(
-          title: const Text('Imprimir etiquetas'),
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: CheckboxListTile(
-                contentPadding: EdgeInsets.zero,
-                value: withText,
-                onChanged: (v) => setState(() => withText = v ?? false),
-                title: const Text('Incluir nombre y talla'),
-                subtitle: const Text('Por defecto: solo el QR'),
-              ),
-            ),
-            const Divider(height: 1),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(24, 12, 24, 4),
-              child: Text(
-                '¿Cuántas columnas por hoja?',
-                style: Theme.of(ctx).textTheme.labelLarge,
-              ),
-            ),
-            for (var c = 2;
-                c <= (withText ? maxLabelColumns : maxLabelColumnsQrOnly);
-                c++)
-              SimpleDialogOption(
-                onPressed: () => Navigator.of(ctx)
-                    .pop((columns: c, withText: withText)),
-                child: Text('$c columnas   ·   ~${c * 9} etiquetas por hoja'),
-              ),
-          ],
-        ),
-      ),
-    );
+    await printProductLabels(products);
   }
 
   Future<void> _openEdit(

@@ -65,34 +65,12 @@ pw.Widget _labelBody(
   );
 }
 
-/// Print a single product's label (small page). QR-only by default.
-Future<void> printProductLabel({
-  required String name,
-  required String sku,
-  String? detail,
-  bool showText = false,
-}) async {
-  final doc = pw.Document();
-  doc.addPage(
-    pw.Page(
-      pageFormat: PdfPageFormat(50 * _mm, 30 * _mm, marginAll: 2 * _mm),
-      build: (context) => _labelBody(
-        Product(id: '', name: name, sku: sku, detail: detail),
-        qrSizeMm: showText ? 20 : 24,
-        showText: showText,
-      ),
-    ),
-  );
-  await Printing.layoutPdf(onLayout: (_) => doc.save());
-}
-
-/// Print MANY product labels in a single PDF as a grid on A4. Each cell's width
-/// is derived from [columns] so they always fit the page (more columns → smaller
-/// labels). The QR shrinks with the columns but stays scannable; the text takes
-/// whatever width is left. Cut along the borders.
+/// Print product labels in a single PDF as a fixed 8-column QR grid on A4 — the
+/// ONE label format, so every QR is the same size whether you print one or many.
+/// Cut along the borders.
 Future<void> printProductLabels(
   List<Product> products, {
-  int columns = 3,
+  int columns = 8,
   bool showText = false,
 }) async {
   final doc = pw.Document();

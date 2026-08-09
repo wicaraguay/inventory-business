@@ -38,7 +38,7 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
   final _formKey = GlobalKey<FormState>();
 
   final _name = TextEditingController();
-  final _color = TextEditingController();
+  // Kept but hidden: the QR code prefix, auto-derived from the model name.
   final _prefix = TextEditingController();
   final _salePrice = TextEditingController();
   final _minPrice = TextEditingController();
@@ -134,7 +134,6 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
   @override
   void dispose() {
     _name.dispose();
-    _color.dispose();
     _prefix.dispose();
     _salePrice.dispose();
     _minPrice.dispose();
@@ -202,11 +201,16 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
       _snack('El precio mínimo no puede ser mayor al de venta');
       return;
     }
-    final color = _color.text.trim();
+    // The QR prefix is auto-derived and hidden; guard the rare empty case.
+    var prefix = _prefix.text.trim();
+    if (prefix.isEmpty) {
+      final fb = _name.text.toUpperCase().replaceAll(RegExp('[^A-Z0-9]'), '');
+      prefix = fb.isEmpty ? 'ITEM' : fb.substring(0, fb.length.clamp(0, 6));
+    }
     Navigator.of(context).pop((
       name: _name.text.trim(),
-      color: color.isEmpty ? null : color,
-      skuPrefix: _prefix.text.trim(),
+      color: null,
+      skuPrefix: prefix,
       salePrice: sale,
       minPrice: min,
       supplierPrice: _price(_supplierPrice),
@@ -255,32 +259,6 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
                       validator: (v) => (v == null || v.trim().isEmpty)
                           ? 'El modelo es obligatorio'
                           : null,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: TextFormField(
-                            controller: _color,
-                            decoration: const InputDecoration(
-                              labelText: 'Color / detalle (opcional)',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: TextFormField(
-                            controller: _prefix,
-                            textCapitalization: TextCapitalization.characters,
-                            decoration: const InputDecoration(
-                              labelText: 'Prefijo de código',
-                            ),
-                            validator: (v) => (v == null || v.trim().isEmpty)
-                                ? 'Necesario para el QR'
-                                : null,
-                          ),
-                        ),
-                      ],
                     ),
                     const SizedBox(height: 8),
                     Row(

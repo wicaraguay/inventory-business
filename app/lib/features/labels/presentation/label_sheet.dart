@@ -43,11 +43,8 @@ class LabelSheet extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            onPressed: () => printProductLabel(
-              name: product.name,
-              sku: product.sku,
-              detail: product.detail,
-            ),
+            // Same fixed 8-column QR format as bulk, so the size never changes.
+            onPressed: () => printProductLabels([product]),
             icon: const Icon(Icons.print),
             label: const Text('Imprimir'),
           ),
