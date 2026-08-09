@@ -19,6 +19,14 @@ abstract interface class ProductRepository {
   /// All items share one generated model_id (they're sizes of one model).
   Future<List<Product>> createBulk(List<BulkProductInput> items);
 
+  /// Adds more sizes to an EXISTING model: each new product reuses [modelId]
+  /// and inherits the model's image (copied from a sibling). Atomic. Throws if
+  /// the model doesn't exist or a size's SKU already exists.
+  Future<List<Product>> addSizesToModel(
+    String modelId,
+    List<BulkProductInput> items,
+  );
+
   Future<Product> update({
     required String id,
     required String name,

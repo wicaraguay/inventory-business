@@ -13,6 +13,7 @@ class ProductDetailSheet extends StatelessWidget {
     required this.siblings,
     required this.threshold,
     this.showCost = false,
+    this.onAddSizes,
     super.key,
   });
 
@@ -27,6 +28,10 @@ class ProductDetailSheet extends StatelessWidget {
 
   /// Whether to show the supplier (cost) price — owner only.
   final bool showCost;
+
+  /// When set, shows an "Agregar tallas" button (owner only). The sheet closes
+  /// itself first, then this runs the add-sizes flow on the parent context.
+  final VoidCallback? onAddSizes;
 
   StockStatus _status(int stock) {
     if (stock <= 0) return StockStatus.out;
@@ -103,6 +108,18 @@ class ProductDetailSheet extends StatelessWidget {
                   itemBuilder: (_, i) => _sizeRow(sizes[i]),
                 ),
               ),
+              if (onAddSizes != null) ...[
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: () {
+                    // Close this sheet first, then run the flow on the parent.
+                    Navigator.of(context).pop();
+                    onAddSizes!();
+                  },
+                  icon: const Icon(Icons.add),
+                  label: const Text('Agregar tallas a este modelo'),
+                ),
+              ],
             ],
           ),
         ),

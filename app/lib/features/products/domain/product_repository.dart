@@ -20,6 +20,13 @@ abstract interface class ProductRepository {
   /// initial stock. Returns the created products (with ids) for label printing.
   Future<List<Product>> createBulk(List<BulkProductInput> items);
 
+  /// Adds more sizes to an existing model (same model_id, prices, and image).
+  /// Returns the created products for label printing.
+  Future<List<Product>> addModelSizes(
+    String modelId,
+    List<BulkProductInput> items,
+  );
+
   Future<void> update({
     required String id,
     required String name,

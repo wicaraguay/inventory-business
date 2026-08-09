@@ -67,6 +67,18 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     return created;
   }
 
+  /// Adds more sizes to an existing model (same model_id, prices, and image).
+  Future<List<Product>> addSizes(
+    String modelId,
+    List<BulkProductInput> items,
+  ) async {
+    final created =
+        await ref.read(productRepositoryProvider).addModelSizes(modelId, items);
+    ref.invalidateSelf();
+    await future;
+    return created;
+  }
+
   Future<void> edit({
     required String id,
     required String name,

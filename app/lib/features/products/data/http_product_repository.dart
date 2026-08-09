@@ -57,6 +57,24 @@ class HttpProductRepository implements ProductRepository {
     }
   }
 
+  @override
+  Future<List<Product>> addModelSizes(
+    String modelId,
+    List<BulkProductInput> items,
+  ) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/products/model/$modelId/sizes',
+        data: {'items': items.map((i) => i.toJson()).toList()},
+      );
+      final created =
+          (res.data!['products'] as List).cast<Map<String, dynamic>>();
+      return created.map(Product.fromJson).toList();
+    } on DioException catch (e) {
+      throw Exception(_backendError(e) ?? 'No se pudieron agregar las tallas.');
+    }
+  }
+
   /// The backend's friendly `{"error": "..."}` message, if any.
   static String? _backendError(DioException e) {
     final data = e.response?.data;

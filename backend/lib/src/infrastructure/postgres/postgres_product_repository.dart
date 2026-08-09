@@ -2,6 +2,7 @@ import 'package:inventy_backend/src/domain/entities/bulk_product_input.dart';
 import 'package:inventy_backend/src/domain/entities/model_size.dart';
 import 'package:inventy_backend/src/domain/entities/product.dart';
 import 'package:inventy_backend/src/domain/entities/product_with_stock.dart';
+import 'package:inventy_backend/src/domain/exceptions.dart';
 import 'package:inventy_backend/src/domain/ports/product_repository.dart';
 import 'package:postgres/postgres.dart';
 
@@ -92,6 +93,96 @@ class PostgresProductRepository implements ProductRepository {
               'productId': product.id,
               'quantity': item.initialStock,
             },
+          );
+        }
+        created.add(product);
+      }
+    });
+    return created;
+  }
+
+  @override
+  Future<List<Product>> addSizesToModel(
+    String modelId,
+    List<BulkProductInput> items,
+  ) async {
+    final created = <Product>[];
+    await _db.runTx((tx) async {
+      // The model must exist (at least one product carries this model_id).
+      final model = await tx.execute(
+        Sql.named('SELECT 1 FROM products WHERE model_id = @m LIMIT 1'),
+        parameters: {'m': modelId},
+      );
+      if (model.isEmpty) {
+        throw DomainException('El modelo no existe');
+      }
+
+      // Reject sizes whose SKU already exists (anywhere) with a clear message,
+      // instead of hitting the unique constraint mid-insert.
+      final skus = [for (final i in items) i.sku.trim()];
+      final ph = [for (var i = 0; i < skus.length; i++) '@s$i'].join(', ');
+      final taken = await tx.execute(
+        Sql.named('SELECT sku FROM products WHERE sku IN ($ph)'),
+        parameters: {for (var i = 0; i < skus.length; i++) 's$i': skus[i]},
+      );
+      if (taken.isNotEmpty) {
+        final dup = [for (final r in taken) r[0] as String].join(', ');
+        throw DomainException('Estas tallas ya existen: $dup');
+      }
+
+      // A sibling that has an image, so the new sizes share the model's photo.
+      final img = await tx.execute(
+        Sql.named('''
+          SELECT product_id FROM product_images
+          WHERE product_id IN (SELECT id FROM products WHERE model_id = @m)
+          LIMIT 1
+        '''),
+        parameters: {'m': modelId},
+      );
+      final imageSourceId = img.isEmpty ? null : img.first[0].toString();
+
+      for (final item in items) {
+        final result = await tx.execute(
+          Sql.named('''
+            INSERT INTO products
+              (name, detail, sku, low_stock_threshold, sale_price, min_price,
+               supplier_price, model_id)
+            VALUES (@name, @detail, @sku, @threshold, @salePrice, @minPrice,
+               @supplierPrice, @modelId)
+            RETURNING $_returning
+          '''),
+          parameters: {
+            'name': item.name,
+            'detail': item.detail,
+            'sku': item.sku,
+            'threshold': item.lowStockThreshold,
+            'salePrice': item.salePrice,
+            'minPrice': item.minPrice,
+            'supplierPrice': item.supplierPrice,
+            'modelId': modelId,
+          },
+        );
+        final product = _map(result.first);
+        if (item.initialStock > 0) {
+          await tx.execute(
+            Sql.named('''
+              INSERT INTO stock_movements (product_id, quantity, type, note)
+              VALUES (@productId, @quantity, 'entry', 'Carga inicial')
+            '''),
+            parameters: {
+              'productId': product.id,
+              'quantity': item.initialStock,
+            },
+          );
+        }
+        if (imageSourceId != null) {
+          await tx.execute(
+            Sql.named('''
+              INSERT INTO product_images (product_id, data, content_type)
+              SELECT @newId, data, content_type
+              FROM product_images WHERE product_id = @src
+            '''),
+            parameters: {'newId': product.id, 'src': imageSourceId},
           );
         }
         created.add(product);

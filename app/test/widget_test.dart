@@ -59,6 +59,16 @@ class _FakeProductRepository implements ProductRepository {
       ];
 
   @override
+  Future<List<Product>> addModelSizes(
+    String modelId,
+    List<BulkProductInput> items,
+  ) async =>
+      [
+        for (final i in items)
+          Product(id: i.sku, name: i.name, sku: i.sku, detail: i.detail),
+      ];
+
+  @override
   Future<void> delete(String id) async => _items.removeWhere((p) => p.id == id);
 
   @override

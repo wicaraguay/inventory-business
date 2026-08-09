@@ -10,6 +10,7 @@ import 'package:inventy_app/features/movements/presentation/widgets/movement_she
 import 'package:inventy_app/features/products/domain/bulk_product_input.dart';
 import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/products/presentation/products_providers.dart';
+import 'package:inventy_app/features/products/presentation/widgets/add_sizes_sheet.dart';
 import 'package:inventy_app/features/products/presentation/widgets/bulk_create_sheet.dart';
 import 'package:inventy_app/features/products/presentation/widgets/create_product_sheet.dart';
 import 'package:inventy_app/features/products/presentation/widgets/product_detail_sheet.dart';
@@ -296,8 +297,80 @@ class ProductsScreen extends ConsumerWidget {
         siblings: siblings.isEmpty ? [product] : siblings,
         threshold: threshold,
         showCost: isOwner,
+        onAddSizes:
+            isOwner ? () => _openAddSizes(context, ref, product) : null,
       ),
     );
+  }
+
+  /// Add missing sizes to an EXISTING model: same model_id, prices, prefix and
+  /// image are inherited; you only pick the new sizes. Owner-only (needs cost).
+  Future<void> _openAddSizes(
+    BuildContext context,
+    WidgetRef ref,
+    Product product,
+  ) async {
+    final modelId = product.modelId;
+    if (modelId == null) {
+      await showAppAlert(context,
+          message: 'Este producto no tiene un modelo asociado.',
+          kind: AlertKind.error);
+      return;
+    }
+    final newSizes = await showModalBottomSheet<List<BulkSizeDraft>>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => AddSizesSheet(modelName: product.name),
+    );
+    if (newSizes == null || newSizes.isEmpty) return;
+
+    // Inherit the SKU prefix and colour from the tapped size so the new ones
+    // match the series exactly (SKU = prefix-size, detail = "talle N · color").
+    final dash = product.sku.lastIndexOf('-');
+    final prefix = dash >= 0 ? product.sku.substring(0, dash) : product.sku;
+    final color = _colorFromDetail(product.detail);
+    final threshold = ref.read(settingsProvider).defaultThreshold;
+    final items = [
+      for (final s in newSizes)
+        BulkProductInput(
+          name: product.name,
+          sku: '$prefix-${s.size}',
+          detail: color == null
+              ? 'talle ${s.size}'
+              : 'talle ${s.size} · $color',
+          lowStockThreshold: threshold,
+          salePrice: product.salePrice,
+          minPrice: product.minPrice,
+          supplierPrice: product.supplierPrice,
+          initialStock: s.quantity,
+        ),
+    ];
+    try {
+      final created =
+          await ref.read(productsProvider.notifier).addSizes(modelId, items);
+      if (context.mounted) {
+        await showAppAlert(context,
+            message: '${created.length} talla(s) agregada(s) al modelo. '
+                'Imprimí sus QR a continuación.',
+            kind: AlertKind.success);
+      }
+      if (context.mounted) await printProductLabels(created);
+    } on Object catch (e) {
+      if (context.mounted) {
+        await showAppAlert(context,
+            message: '$e'.replaceFirst('Exception: ', ''),
+            kind: AlertKind.error);
+      }
+    }
+  }
+
+  /// Extracts the colour from a size detail like "talle 34 · Rojo".
+  String? _colorFromDetail(String? detail) {
+    if (detail == null) return null;
+    final i = detail.indexOf('·');
+    if (i < 0) return null;
+    final c = detail.substring(i + 1).trim();
+    return c.isEmpty ? null : c;
   }
 
   void _openLabel(BuildContext context, Product product) {
