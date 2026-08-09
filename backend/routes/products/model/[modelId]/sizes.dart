@@ -42,7 +42,12 @@ Future<Response> onRequest(RequestContext context, String modelId) async {
     final created = await useCase.call(modelId, items);
     return Response.json(
       statusCode: HttpStatus.created,
-      body: {'products': [for (final p in created) _json(p, withSupplier: owner)]},
+      body: {
+        'products': [
+          for (var i = 0; i < created.length; i++)
+            _json(created[i], items[i].initialStock, withSupplier: owner),
+        ],
+      },
     );
   } on DomainException catch (e) {
     return Response.json(
@@ -52,8 +57,14 @@ Future<Response> onRequest(RequestContext context, String modelId) async {
   }
 }
 
-/// New sizes start at 0 stock and inherit the model's image (copied server-side).
-Map<String, dynamic> _json(Product p, {required bool withSupplier}) => {
+/// New sizes inherit the model's image (copied server-side). [stock] echoes the
+/// initial stock so the app can print one QR per pair.
+Map<String, dynamic> _json(
+  Product p,
+  int stock, {
+  required bool withSupplier,
+}) =>
+    {
       'id': p.id,
       'name': p.name,
       'detail': p.detail,
@@ -62,7 +73,7 @@ Map<String, dynamic> _json(Product p, {required bool withSupplier}) => {
       'salePrice': p.salePrice,
       'minPrice': p.minPrice,
       'modelId': p.modelId,
-      'currentStock': 0,
+      'currentStock': stock,
       'hasImage': true,
       'imageVersion': 0,
       if (withSupplier) 'supplierPrice': p.supplierPrice,

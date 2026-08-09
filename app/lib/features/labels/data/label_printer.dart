@@ -21,24 +21,68 @@ const maxLabelColumns = 5;
 /// non-laser printers.
 const maxLabelColumnsQrOnly = 15;
 
-/// One product label. By default it's JUST the QR (encoding the SKU), centered.
-/// With [showText] the name / detail / sku are printed beside it.
+/// The numeric size at the end of a SKU (e.g. "ECO-35" -> "35"), or null when
+/// the SKU doesn't end in a short number — so we never stamp a garbled centre.
+String? _sizeLabel(Product p) {
+  final dash = p.sku.lastIndexOf('-');
+  final tail = (dash >= 0 ? p.sku.substring(dash + 1) : p.sku).trim();
+  if (tail.isEmpty || tail.length > 3 || int.tryParse(tail) == null) return null;
+  return tail;
+}
+
+/// One product label. By default it's JUST the QR (encoding the SKU), centered,
+/// with the size number stamped in the middle so a pair is identifiable at a
+/// glance. With [showText] the name / detail / sku are printed beside it.
 pw.Widget _labelBody(
   Product product, {
   double qrSizeMm = 20,
   bool showText = false,
 }) {
+  final sizeLabel = _sizeLabel(product);
+  // With a centre stamp, use HIGH error correction so the covered ~13% area
+  // still scans; plain QRs stay LOW to keep the smallest modules readable.
   final qr = pw.BarcodeWidget(
-    barcode: pw.Barcode.qrCode(),
+    barcode: pw.Barcode.qrCode(
+      errorCorrectLevel: sizeLabel != null
+          ? pw.BarcodeQRCorrectionLevel.high
+          : pw.BarcodeQRCorrectionLevel.low,
+    ),
     data: product.sku,
     width: qrSizeMm * _mm,
     height: qrSizeMm * _mm,
   );
-  if (!showText) return pw.Center(child: qr);
+  final qrWidget = sizeLabel == null
+      ? qr
+      : pw.Stack(
+          alignment: pw.Alignment.center,
+          children: [
+            qr,
+            pw.Container(
+              width: qrSizeMm * _mm * 0.36,
+              height: qrSizeMm * _mm * 0.36,
+              alignment: pw.Alignment.center,
+              decoration: pw.BoxDecoration(
+                color: PdfColors.white,
+                border: pw.Border.all(width: 0.4),
+              ),
+              child: pw.FittedBox(
+                fit: pw.BoxFit.scaleDown,
+                child: pw.Text(
+                  sizeLabel,
+                  style: pw.TextStyle(
+                    fontWeight: pw.FontWeight.bold,
+                    fontSize: 8,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+  if (!showText) return pw.Center(child: qrWidget);
   return pw.Row(
     crossAxisAlignment: pw.CrossAxisAlignment.center,
     children: [
-      qr,
+      qrWidget,
       pw.SizedBox(width: 1.5 * _mm),
       pw.Expanded(
         child: pw.Column(
@@ -73,12 +117,21 @@ pw.Widget _labelBody(
 
 /// Print product labels in a single PDF as a fixed-column QR grid on A4 — the
 /// ONE label format, so every QR is the same size whether you print one, two,
-/// or the whole inventory. Cut along the borders.
-Future<void> printProductLabels(
+/// or the whole inventory. Prints ONE label per physical pair (a size with 4
+/// pairs of stock yields 4 identical QRs). Returns how many labels were printed
+/// (0 when nothing has stock, so callers can warn). Cut along the borders.
+Future<int> printProductLabels(
   List<Product> products, {
   int columns = defaultLabelColumns,
   bool showText = false,
 }) async {
+  // One QR per pair: repeat each size as many times as its current stock.
+  final labels = [
+    for (final p in products)
+      for (var i = 0; i < p.currentStock; i++) p,
+  ];
+  if (labels.isEmpty) return 0;
+
   final doc = pw.Document();
 
   const pageMarginMm = 8.0;
@@ -126,9 +179,9 @@ Future<void> printProductLabels(
         child: _labelBody(p, qrSizeMm: qrSizeMm, showText: showText),
       );
 
-  for (var i = 0; i < products.length; i += perPage) {
-    final end = math.min(i + perPage, products.length);
-    final pageItems = products.sublist(i, end);
+  for (var i = 0; i < labels.length; i += perPage) {
+    final end = math.min(i + perPage, labels.length);
+    final pageItems = labels.sublist(i, end);
     doc.addPage(
       pw.Page(
         pageFormat: PdfPageFormat.a4,
@@ -143,4 +196,5 @@ Future<void> printProductLabels(
   }
 
   await Printing.layoutPdf(onLayout: (_) => doc.save());
+  return labels.length;
 }

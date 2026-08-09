@@ -131,8 +131,14 @@ Future<Response> _createBulk(
     return Response.json(
       statusCode: HttpStatus.created,
       body: {
+        // Echo each size's initial stock so the app can print one QR per pair.
         'products': [
-          for (final p in created) _productJson(p, 0, withSupplier: owner),
+          for (var i = 0; i < created.length; i++)
+            _productJson(
+              created[i],
+              items[i].initialStock,
+              withSupplier: owner,
+            ),
         ],
       },
     );

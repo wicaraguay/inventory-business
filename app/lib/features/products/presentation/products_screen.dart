@@ -134,9 +134,9 @@ class ProductsScreen extends ConsumerWidget {
           kind: AlertKind.success,
         );
       }
-      // Print all the new labels in one PDF (fixed 12-column QR format).
+      // Print one QR per pair (fixed 12-column format); warns if all are 0.
       if (context.mounted) {
-        await printProductLabels(created);
+        await _printLabels(context, created);
       }
     } on Object catch (e) {
       if (context.mounted) {
@@ -177,10 +177,21 @@ class ProductsScreen extends ConsumerWidget {
     }
   }
 
+  /// Prints one QR per pair in stock and warns when there's nothing to label.
+  Future<void> _printLabels(BuildContext context, List<Product> items) async {
+    final printed = await printProductLabels(items);
+    if (printed == 0 && context.mounted) {
+      await showAppAlert(context,
+          message: 'Estas tallas están en 0 — no hay pares para etiquetar. '
+              'Cargá stock (Registrar Stock) y volvé a imprimir.',
+          kind: AlertKind.info);
+    }
+  }
+
   Future<void> _printAll(BuildContext context, WidgetRef ref) async {
     final products = ref.read(productsProvider).asData?.value ?? const [];
     if (products.isEmpty) return;
-    await printProductLabels(products);
+    await _printLabels(context, products);
   }
 
   /// Print QR labels for just the products the user ticked. Same fixed
@@ -195,7 +206,7 @@ class ProductsScreen extends ConsumerWidget {
           kind: AlertKind.info);
       return;
     }
-    await printProductLabels(chosen);
+    await _printLabels(context, chosen);
     ref.read(labelSelectionProvider.notifier).cancel();
   }
 
@@ -354,7 +365,7 @@ class ProductsScreen extends ConsumerWidget {
                 'Imprimí sus QR a continuación.',
             kind: AlertKind.success);
       }
-      if (context.mounted) await printProductLabels(created);
+      if (context.mounted) await _printLabels(context, created);
     } on Object catch (e) {
       if (context.mounted) {
         await showAppAlert(context,
