@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
+import 'package:inventy_app/features/dashboard/presentation/dashboard_providers.dart';
+import 'package:inventy_app/features/products/presentation/products_providers.dart';
+import 'package:inventy_app/features/sales/domain/sale.dart';
 import 'package:inventy_app/features/sales/presentation/sales_providers.dart';
 import 'package:inventy_app/features/sales/presentation/widgets/sales_table.dart';
 import 'package:inventy_app/shared/format.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
+import 'package:inventy_app/shared/ui/app_alert.dart';
 import 'package:inventy_app/shared/ui/molecules/metric_card.dart';
 import 'package:inventy_app/shared/ui/molecules/metric_card_row.dart';
 
@@ -15,6 +20,7 @@ class SalesScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final report = ref.watch(salesReportProvider);
+    final isOwner = ref.watch(currentUserProvider)?.isOwner ?? false;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -73,7 +79,11 @@ class SalesScreen extends ConsumerWidget {
                   Expanded(
                     child: r.records.isEmpty
                         ? const _Empty()
-                        : SalesTable(sales: r.records),
+                        : SalesTable(
+                            sales: r.records,
+                            canVoid: isOwner,
+                            onVoid: (s) => _confirmVoid(context, ref, s),
+                          ),
                   ),
                 ],
               ),
@@ -84,6 +94,49 @@ class SalesScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _confirmVoid(
+      BuildContext context, WidgetRef ref, Sale sale) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (dialogCtx) => AlertDialog(
+        title: const Text('Anular venta'),
+        content: Text(
+          '¿Anular la venta de "${sale.productName}" por ${money(sale.total)}? '
+          'Se devuelve el stock y queda registrada como anulada (no se borra).',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogCtx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: AppColors.danger),
+            onPressed: () => Navigator.of(dialogCtx).pop(true),
+            child: const Text('Anular'),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await ref.read(saleRepositoryProvider).voidSale(sale.id);
+      ref.invalidate(salesReportProvider);
+      ref.invalidate(productsProvider); // stock changed
+      ref.invalidate(lowStockProvider);
+      if (context.mounted) {
+        await showAppAlert(context,
+            message: 'Venta anulada. Se devolvió el stock.',
+            kind: AlertKind.success);
+      }
+    } on Object catch (e) {
+      if (context.mounted) {
+        await showAppAlert(context,
+            message: 'No se pudo anular: $e'.replaceFirst('Exception: ', ''),
+            kind: AlertKind.error);
+      }
+    }
   }
 }
 

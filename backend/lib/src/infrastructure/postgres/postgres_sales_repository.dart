@@ -2,6 +2,7 @@ import 'package:inventy_backend/src/domain/entities/sale_item.dart';
 import 'package:inventy_backend/src/domain/entities/sale_record.dart';
 import 'package:inventy_backend/src/domain/entities/sales_bucket.dart';
 import 'package:inventy_backend/src/domain/entities/sales_summary.dart';
+import 'package:inventy_backend/src/domain/exceptions.dart';
 import 'package:inventy_backend/src/domain/ports/sales_repository.dart';
 import 'package:postgres/postgres.dart';
 
@@ -46,8 +47,9 @@ class PostgresSalesRepository implements SalesRepository {
   Future<List<SaleRecord>> recent({int limit = 100}) async {
     final result = await _db.execute(
       Sql.named('''
-        SELECT p.name, p.detail, p.sku, s.quantity,
-               s.unit_price::float8, s.total::float8, s.created_at
+        SELECT s.id, p.name, p.detail, p.sku, s.quantity,
+               s.unit_price::float8, s.total::float8, s.created_at,
+               s.voided_at, s.voided_by
         FROM sales s
         JOIN products p ON p.id = s.product_id
         ORDER BY s.created_at DESC
@@ -59,16 +61,50 @@ class PostgresSalesRepository implements SalesRepository {
     return result
         .map(
           (row) => SaleRecord(
-            productName: row[0]! as String,
-            detail: row[1] as String?,
-            sku: row[2]! as String,
-            quantity: row[3]! as int,
-            unitPrice: row[4]! as double,
-            total: row[5]! as double,
-            createdAt: row[6]! as DateTime,
+            id: row[0].toString(),
+            productName: row[1]! as String,
+            detail: row[2] as String?,
+            sku: row[3]! as String,
+            quantity: row[4]! as int,
+            unitPrice: row[5]! as double,
+            total: row[6]! as double,
+            createdAt: row[7]! as DateTime,
+            voidedAt: row[8] as DateTime?,
+            voidedBy: row[9] as String?,
           ),
         )
         .toList();
+  }
+
+  @override
+  Future<void> voidSale(String id, String? by) async {
+    await _db.runTx((tx) async {
+      final res = await tx.execute(
+        Sql.named(
+          'SELECT product_id, quantity, voided_at FROM sales WHERE id = @id',
+        ),
+        parameters: {'id': id},
+      );
+      if (res.isEmpty) throw DomainException('La venta no existe');
+      final row = res.first;
+      if (row[2] != null) throw DomainException('La venta ya está anulada');
+      final productId = row[0].toString();
+      final quantity = row[1]! as int;
+      await tx.execute(
+        Sql.named(
+          'UPDATE sales SET voided_at = now(), voided_by = @by WHERE id = @id',
+        ),
+        parameters: {'id': id, 'by': by},
+      );
+      // Compensating entry movement restores the stock the sale had taken.
+      await tx.execute(
+        Sql.named('''
+          INSERT INTO stock_movements (product_id, quantity, type, note)
+          VALUES (@p, @q, 'entry', 'Anulación de venta')
+        '''),
+        parameters: {'p': productId, 'q': quantity},
+      );
+    });
   }
 
   @override
@@ -85,6 +121,7 @@ class PostgresSalesRepository implements SalesRepository {
           WHERE date_trunc('year', created_at) = date_trunc('year', now())
         ), 0)::float8
       FROM sales
+      WHERE voided_at IS NULL
     ''');
     final row = result.first;
     return SalesSummary(
@@ -111,6 +148,7 @@ class PostgresSalesRepository implements SalesRepository {
                  interval '1 hour'
                ) g
           LEFT JOIN sales s ON date_trunc('hour', s.created_at) = g
+                            AND s.voided_at IS NULL
           GROUP BY g ORDER BY g
         '''
         : '''
@@ -121,6 +159,7 @@ class PostgresSalesRepository implements SalesRepository {
                  interval '1 day'
                ) g
           LEFT JOIN sales s ON s.created_at::date = g::date
+                            AND s.voided_at IS NULL
           GROUP BY g ORDER BY g
         ''';
 

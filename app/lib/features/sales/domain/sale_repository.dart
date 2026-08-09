@@ -18,6 +18,9 @@ abstract interface class SaleRepository {
 
   Future<SalesReport> report();
 
+  /// Voids (anula) a sale: reverses it, restores stock, keeps the record.
+  Future<void> voidSale(String id);
+
   /// Sales totals over time for the chart. [by] is 'day' or 'hour'.
   Future<List<SalesBucket>> series(String by);
 }

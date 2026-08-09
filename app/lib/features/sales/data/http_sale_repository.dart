@@ -30,6 +30,17 @@ class HttpSaleRepository implements SaleRepository {
   }
 
   @override
+  Future<void> voidSale(String id) async {
+    try {
+      await _dio.delete<void>('/sales/$id');
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final message = data is Map ? data['error']?.toString() : null;
+      throw SaleException(message ?? 'No se pudo anular la venta');
+    }
+  }
+
+  @override
   Future<SalesReport> report() async {
     final res = await _dio.get<Map<String, dynamic>>('/sales');
     final data = res.data!;

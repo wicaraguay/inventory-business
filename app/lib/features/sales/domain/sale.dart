@@ -1,6 +1,7 @@
 /// A registered sale (read model on the client).
 class Sale {
   const Sale({
+    required this.id,
     required this.productName,
     required this.sku,
     required this.quantity,
@@ -8,9 +9,12 @@ class Sale {
     required this.total,
     required this.createdAt,
     this.detail,
+    this.voidedAt,
+    this.voidedBy,
   });
 
   factory Sale.fromJson(Map<String, dynamic> json) => Sale(
+        id: (json['id'] as String?) ?? '',
         productName: json['productName'] as String,
         detail: json['detail'] as String?,
         sku: json['sku'] as String,
@@ -18,8 +22,13 @@ class Sale {
         unitPrice: (json['unitPrice'] as num).toDouble(),
         total: (json['total'] as num).toDouble(),
         createdAt: DateTime.parse(json['createdAt'] as String),
+        voidedAt: json['voidedAt'] == null
+            ? null
+            : DateTime.parse(json['voidedAt'] as String),
+        voidedBy: json['voidedBy'] as String?,
       );
 
+  final String id;
   final String productName;
   final String? detail;
   final String sku;
@@ -27,6 +36,10 @@ class Sale {
   final double unitPrice;
   final double total;
   final DateTime createdAt;
+  final DateTime? voidedAt;
+  final String? voidedBy;
+
+  bool get isVoided => voidedAt != null;
 }
 
 /// Aggregated sales figures.

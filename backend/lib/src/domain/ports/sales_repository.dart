@@ -10,6 +10,9 @@ abstract interface class SalesRepository {
 
   Future<List<SaleRecord>> recent({int limit = 100});
 
+  /// Voids a sale (soft): marks it, restores stock, keeps the record.
+  Future<void> voidSale(String id, String? by);
+
   Future<SalesSummary> summary();
 
   /// Time-series of sales totals. [by] is 'day' or 'hour'; [buckets] is how

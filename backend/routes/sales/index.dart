@@ -24,6 +24,7 @@ Future<Response> _list(RequestContext context) async {
       'sales': records
           .map(
             (s) => {
+              'id': s.id,
               'productName': s.productName,
               'detail': s.detail,
               'sku': s.sku,
@@ -31,6 +32,8 @@ Future<Response> _list(RequestContext context) async {
               'unitPrice': s.unitPrice,
               'total': s.total,
               'createdAt': s.createdAt.toIso8601String(),
+              'voidedAt': s.voidedAt?.toIso8601String(),
+              'voidedBy': s.voidedBy,
             },
           )
           .toList(),

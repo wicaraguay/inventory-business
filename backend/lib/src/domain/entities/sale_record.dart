@@ -1,6 +1,7 @@
 /// Read model: one registered sale, enriched with product info.
 class SaleRecord {
   SaleRecord({
+    required this.id,
     required this.productName,
     required this.sku,
     required this.quantity,
@@ -8,8 +9,11 @@ class SaleRecord {
     required this.total,
     required this.createdAt,
     this.detail,
+    this.voidedAt,
+    this.voidedBy,
   });
 
+  final String id;
   final String productName;
   final String? detail;
   final String sku;
@@ -17,4 +21,8 @@ class SaleRecord {
   final double unitPrice;
   final double total;
   final DateTime createdAt;
+
+  /// When/who voided it (null = active).
+  final DateTime? voidedAt;
+  final String? voidedBy;
 }

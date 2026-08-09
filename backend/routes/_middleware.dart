@@ -29,6 +29,7 @@ import 'package:inventy_backend/src/application/snooze_low_stock.dart';
 import 'package:inventy_backend/src/application/update_product.dart';
 import 'package:inventy_backend/src/application/update_settings.dart';
 import 'package:inventy_backend/src/application/update_user.dart';
+import 'package:inventy_backend/src/application/void_sale.dart';
 import 'package:inventy_backend/src/domain/entities/user.dart';
 import 'package:inventy_backend/src/infrastructure/auth/jwt_service.dart';
 import 'package:inventy_backend/src/infrastructure/auth/password_hasher.dart';
@@ -160,6 +161,12 @@ Handler middleware(Handler handler) {
         provider<Future<ListSales>>(
           (_) async =>
               ListSales(PostgresSalesRepository(await Database.connection())),
+        ),
+      )
+      .use(
+        provider<Future<VoidSale>>(
+          (_) async =>
+              VoidSale(PostgresSalesRepository(await Database.connection())),
         ),
       )
       .use(
@@ -301,6 +308,8 @@ bool _isOwnerOnly(RequestContext context) {
   }
   if (p == '/sales' && m == HttpMethod.get) return true;
   if (p.startsWith('/sales/series')) return true;
+  // Anular una venta: solo el dueño (la registración sí la hace el empleado).
+  if (m == HttpMethod.delete && p.startsWith('/sales/')) return true;
   if (p == '/cash' || p.startsWith('/cash/')) return true;
   // Deleting a product outright is destructive: owner only (an inventory helper
   // can create/edit, but not delete). NOT the image sub-route (that's just its
