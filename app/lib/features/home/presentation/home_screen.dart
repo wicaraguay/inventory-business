@@ -41,7 +41,7 @@ const _actions = <_Action>[
     label: 'Caja',
     path: '/cash',
     color: AppColors.warning,
-    ownerOnly: true,
+    ownerOnly: false,
   ),
   (
     icon: Icons.receipt_long_outlined,

@@ -21,7 +21,6 @@ import 'package:inventy_app/shared/ui/app_shell.dart';
 const _ownerOnlyPaths = {
   '/dashboard',
   '/sales',
-  '/cash',
   '/movements',
   '/users',
   '/settings',

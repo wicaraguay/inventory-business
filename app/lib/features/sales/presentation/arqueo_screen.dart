@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/sales/domain/cash_close.dart';
 import 'package:inventy_app/features/sales/presentation/cash_providers.dart';
-import 'package:inventy_app/features/sales/presentation/sales_providers.dart';
 import 'package:inventy_app/shared/format.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/app_alert.dart';
@@ -32,9 +31,6 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
   double _num(TextEditingController c) =>
       double.tryParse(c.text.trim().replaceAll(',', '.')) ?? 0;
 
-  bool _sameDay(DateTime a, DateTime b) =>
-      a.year == b.year && a.month == b.month && a.day == b.day;
-
   Future<void> _save(double ventasHoy) async {
     setState(() => _saving = true);
     try {
@@ -61,7 +57,7 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final report = ref.watch(salesReportProvider);
+    final today = ref.watch(todaySalesProvider);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: ListView(
@@ -92,8 +88,8 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          report.when(
-            data: (r) => _body(context, r.summary.totalToday, _todayCount(r)),
+          today.when(
+            data: (t) => _body(context, t.total, t.count),
             loading: () => const Center(
                 child: Padding(
                     padding: EdgeInsets.all(32),
@@ -105,13 +101,6 @@ class _ArqueoScreenState extends ConsumerState<ArqueoScreen> {
         ],
       ),
     );
-  }
-
-  int _todayCount(dynamic r) {
-    final now = DateTime.now();
-    return (r.records as List)
-        .where((s) => _sameDay((s.createdAt as DateTime).toLocal(), now))
-        .length;
   }
 
   Widget _body(BuildContext context, double ventasHoy, int countToday) {

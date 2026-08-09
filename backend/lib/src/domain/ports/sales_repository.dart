@@ -15,6 +15,10 @@ abstract interface class SalesRepository {
 
   Future<SalesSummary> summary();
 
+  /// Today's sales total + count (non-voided) — for the cash close, which an
+  /// employee may run without seeing the full money reports.
+  Future<({double total, int count})> todayTotals();
+
   /// Time-series of sales totals. [by] is 'day' or 'hour'; [buckets] is how
   /// many periods back to include (zero-filled).
   Future<List<SalesBucket>> series({required String by, required int buckets});

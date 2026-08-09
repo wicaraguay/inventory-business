@@ -134,6 +134,17 @@ class PostgresSalesRepository implements SalesRepository {
   }
 
   @override
+  Future<({double total, int count})> todayTotals() async {
+    final result = await _db.execute('''
+      SELECT COALESCE(SUM(total), 0)::float8, COUNT(*)::int
+      FROM sales
+      WHERE created_at::date = current_date AND voided_at IS NULL
+    ''');
+    final row = result.first;
+    return (total: row[0]! as double, count: row[1]! as int);
+  }
+
+  @override
   Future<List<SalesBucket>> series({
     required String by,
     required int buckets,

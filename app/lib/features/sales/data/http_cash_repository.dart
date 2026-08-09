@@ -29,4 +29,13 @@ class HttpCashRepository {
         .map(CashClose.fromJson)
         .toList();
   }
+
+  /// Today's sales total + count (works for employees too).
+  Future<({double total, int count})> today() async {
+    final res = await _dio.get<Map<String, dynamic>>('/cash/today');
+    return (
+      total: (res.data!['salesTotal'] as num).toDouble(),
+      count: res.data!['count'] as int,
+    );
+  }
 }

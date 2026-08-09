@@ -11,3 +11,8 @@ final cashRepositoryProvider = Provider<HttpCashRepository>(
 final cashClosesProvider = FutureProvider<List<CashClose>>(
   (ref) => ref.watch(cashRepositoryProvider).recent(),
 );
+
+/// Today's sales total + count — feeds the cash close (employee-accessible).
+final todaySalesProvider = FutureProvider<({double total, int count})>(
+  (ref) => ref.watch(cashRepositoryProvider).today(),
+);
