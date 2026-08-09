@@ -190,6 +190,12 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
   int get _totalPairs => _sizes.values.fold(0, (a, b) => a + b);
 
   void _submit() {
+    // The model field lives in a lazy ListView, so Form.validate() can skip it
+    // when it's scrolled off-screen — check the controller directly.
+    if (_name.text.trim().isEmpty) {
+      _snack('El modelo es obligatorio');
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     if (_sizes.isEmpty) {
       _snack('Agregá al menos una talla');

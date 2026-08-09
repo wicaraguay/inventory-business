@@ -118,10 +118,11 @@ class ProductsScreen extends ConsumerWidget {
       if (context.mounted) {
         await printProductLabels(created);
       }
-    } on Exception catch (e) {
+    } on Object catch (e) {
       if (context.mounted) {
         await showAppAlert(context,
-            message: 'No se pudo cargar: $e', kind: AlertKind.error);
+            message: '$e'.replaceFirst('Exception: ', ''),
+            kind: AlertKind.error);
       }
     }
   }

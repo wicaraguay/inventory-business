@@ -132,6 +132,13 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
   }
 
   void _submit() {
+    // The name lives in a lazy ListView; check it directly (Form.validate()
+    // skips off-screen fields).
+    if (_name.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('El nombre es obligatorio')));
+      return;
+    }
     if (!_formKey.currentState!.validate()) return;
     var sku = _sku.text.trim();
     // Create mode hides the SKU field: it's auto-derived from the name. Guard

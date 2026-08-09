@@ -44,12 +44,23 @@ class HttpProductRepository implements ProductRepository {
 
   @override
   Future<List<Product>> createBulk(List<BulkProductInput> items) async {
-    final res = await _dio.post<Map<String, dynamic>>(
-      '/products',
-      data: {'items': items.map((i) => i.toJson()).toList()},
-    );
-    final created = (res.data!['products'] as List).cast<Map<String, dynamic>>();
-    return created.map(Product.fromJson).toList();
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/products',
+        data: {'items': items.map((i) => i.toJson()).toList()},
+      );
+      final created =
+          (res.data!['products'] as List).cast<Map<String, dynamic>>();
+      return created.map(Product.fromJson).toList();
+    } on DioException catch (e) {
+      throw Exception(_backendError(e) ?? 'No se pudo registrar la carga.');
+    }
+  }
+
+  /// The backend's friendly `{"error": "..."}` message, if any.
+  static String? _backendError(DioException e) {
+    final data = e.response?.data;
+    return data is Map ? data['error']?.toString() : null;
   }
 
   @override
