@@ -126,6 +126,16 @@ class PostgresUserRepository implements UserRepository {
   }
 
   @override
+  Future<List<UserWithHash>> ownersWithHash() async {
+    final result = await _db.execute(
+      "SELECT $_cols, password_hash FROM users WHERE role = 'owner'",
+    );
+    return result
+        .map((row) => UserWithHash(_map(row), row[5]! as String))
+        .toList();
+  }
+
+  @override
   Future<bool> usernameExists(String username) async {
     final result = await _db.execute(
       Sql.named('SELECT 1 FROM users WHERE username = @u'),

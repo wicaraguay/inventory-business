@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:dart_frog/dart_frog.dart';
+import 'package:inventy_backend/src/application/authorize_owner.dart';
 import 'package:inventy_backend/src/application/business_logo.dart';
 import 'package:inventy_backend/src/application/change_password.dart';
 import 'package:inventy_backend/src/application/create_product.dart';
@@ -233,6 +234,14 @@ Handler middleware(Handler handler) {
       .use(
         provider<Future<ChangePassword>>(
           (_) async => ChangePassword(
+            PostgresUserRepository(await Database.connection()),
+            PasswordHasher(),
+          ),
+        ),
+      )
+      .use(
+        provider<Future<AuthorizeOwner>>(
+          (_) async => AuthorizeOwner(
             PostgresUserRepository(await Database.connection()),
             PasswordHasher(),
           ),

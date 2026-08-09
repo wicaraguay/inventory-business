@@ -38,4 +38,19 @@ class HttpAuthRepository {
       data: {'currentPassword': currentPassword, 'newPassword': newPassword},
     );
   }
+
+  /// Verifies an owner's password to authorize a below-list discount at the
+  /// register. Returns the owner's name, or null if the password is wrong.
+  Future<String?> authorizeDiscount(String password) async {
+    try {
+      final res = await _dio.post<Map<String, dynamic>>(
+        '/auth/authorize-discount',
+        data: {'password': password},
+      );
+      return res.data?['by'] as String?;
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 403) return null; // wrong password
+      rethrow;
+    }
+  }
 }

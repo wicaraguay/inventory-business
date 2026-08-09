@@ -44,5 +44,9 @@ abstract interface class UserRepository {
   /// How many owners exist (used to refuse removing the last one).
   Future<int> countOwners();
 
+  /// Owners with their password hashes — to authorize a discount by verifying
+  /// an owner's password at the register.
+  Future<List<UserWithHash>> ownersWithHash();
+
   Future<bool> usernameExists(String username);
 }
