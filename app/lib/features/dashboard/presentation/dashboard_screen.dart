@@ -4,7 +4,6 @@ import 'package:inventy_app/features/dashboard/presentation/widgets/sales_chart.
 import 'package:inventy_app/features/sales/presentation/sales_providers.dart';
 import 'package:inventy_app/shared/format.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
-import 'package:inventy_app/shared/ui/molecules/metric_card.dart';
 import 'package:inventy_app/shared/ui/molecules/metric_card_row.dart';
 
 /// Container: dashboard with sales totals, a sales chart, and low-stock alerts.
@@ -39,23 +38,40 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             const SizedBox(height: 24),
             MetricCardRow([
-              MetricCard(
-                label: 'Ventas hoy',
-                value: money(summary?.totalToday),
-                icon: Icons.point_of_sale,
-                accent: AppColors.success,
+              _RangeCard(
+                label: 'Hoy',
+                sales: summary?.totalToday ?? 0,
+                profit: summary?.profitToday ?? 0,
               ),
-              MetricCard(
-                label: 'Ventas del mes',
-                value: money(summary?.totalMonth),
-                icon: Icons.calendar_month_outlined,
+              _RangeCard(
+                label: '7 días',
+                sales: summary?.totalWeek ?? 0,
+                profit: summary?.profitWeek ?? 0,
               ),
-              MetricCard(
-                label: 'Ventas del año',
-                value: money(summary?.totalYear),
-                icon: Icons.insights_outlined,
+              _RangeCard(
+                label: 'Mes',
+                sales: summary?.totalMonth ?? 0,
+                profit: summary?.profitMonth ?? 0,
+              ),
+              _RangeCard(
+                label: 'Trimestre',
+                sales: summary?.totalQuarter ?? 0,
+                profit: summary?.profitQuarter ?? 0,
+              ),
+              _RangeCard(
+                label: 'Año',
+                sales: summary?.totalYear ?? 0,
+                profit: summary?.profitYear ?? 0,
               ),
             ]),
+            const SizedBox(height: 8),
+            Text(
+              'La ganancia es estimada: precio vendido menos el costo actual '
+              'del proveedor.',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.onSurface.withValues(alpha: 0.6)),
+            ),
             const SizedBox(height: 16),
             Card(
               child: Padding(
@@ -113,6 +129,79 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ),
                   ],
                 ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// One time-range tile: revenue on top, estimated profit below (green when
+/// positive, red if you sold under cost).
+class _RangeCard extends StatelessWidget {
+  const _RangeCard({
+    required this.label,
+    required this.sales,
+    required this.profit,
+  });
+
+  final String label;
+  final double sales;
+  final double profit;
+
+  @override
+  Widget build(BuildContext context) {
+    final profitColor = profit >= 0 ? AppColors.success : AppColors.danger;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label.toUpperCase(),
+              style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: AppColors.onSurface.withValues(alpha: 0.6),
+                    fontWeight: FontWeight.w700,
+                  ),
+            ),
+            const SizedBox(height: 8),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Text(
+                money(sales),
+                maxLines: 1,
+                softWrap: false,
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+            ),
+            const SizedBox(height: 6),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    profit >= 0 ? Icons.trending_up : Icons.trending_down,
+                    size: 15,
+                    color: profitColor,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    '${money(profit)} ganancia',
+                    maxLines: 1,
+                    softWrap: false,
+                    style: TextStyle(
+                      color: profitColor,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

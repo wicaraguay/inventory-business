@@ -42,29 +42,55 @@ class Sale {
   bool get isVoided => voidedAt != null;
 }
 
-/// Aggregated sales figures.
+/// Aggregated sales figures. Each range carries revenue (`total*`) and the
+/// estimated profit (`profit*` = revenue - cost). Profit fields default to 0
+/// for tolerance with older backends.
 class SalesSummary {
   const SalesSummary({
     required this.count,
     required this.totalAll,
     required this.totalToday,
+    required this.totalWeek,
     required this.totalMonth,
+    required this.totalQuarter,
     required this.totalYear,
+    required this.profitToday,
+    required this.profitWeek,
+    required this.profitMonth,
+    required this.profitQuarter,
+    required this.profitYear,
   });
 
-  factory SalesSummary.fromJson(Map<String, dynamic> json) => SalesSummary(
-        count: json['count'] as int,
-        totalAll: (json['totalAll'] as num).toDouble(),
-        totalToday: (json['totalToday'] as num).toDouble(),
-        totalMonth: (json['totalMonth'] as num?)?.toDouble() ?? 0,
-        totalYear: (json['totalYear'] as num?)?.toDouble() ?? 0,
-      );
+  factory SalesSummary.fromJson(Map<String, dynamic> json) {
+    double d(String k) => (json[k] as num?)?.toDouble() ?? 0;
+    return SalesSummary(
+      count: json['count'] as int,
+      totalAll: d('totalAll'),
+      totalToday: d('totalToday'),
+      totalWeek: d('totalWeek'),
+      totalMonth: d('totalMonth'),
+      totalQuarter: d('totalQuarter'),
+      totalYear: d('totalYear'),
+      profitToday: d('profitToday'),
+      profitWeek: d('profitWeek'),
+      profitMonth: d('profitMonth'),
+      profitQuarter: d('profitQuarter'),
+      profitYear: d('profitYear'),
+    );
+  }
 
   final int count;
   final double totalAll;
   final double totalToday;
+  final double totalWeek;
   final double totalMonth;
+  final double totalQuarter;
   final double totalYear;
+  final double profitToday;
+  final double profitWeek;
+  final double profitMonth;
+  final double profitQuarter;
+  final double profitYear;
 }
 
 /// One point of the sales time-series (a day or hour).

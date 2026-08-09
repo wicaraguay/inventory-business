@@ -109,27 +109,42 @@ class PostgresSalesRepository implements SalesRepository {
 
   @override
   Future<SalesSummary> summary() async {
+    // Revenue = SUM(total). Estimated profit = SUM((price - cost) * qty), with
+    // the product's CURRENT supplier price as cost (unknown cost counts as 0).
+    // "Week" is the last 7 calendar days (today + previous 6). Voided excluded.
+    const profit = '(s.unit_price - COALESCE(p.supplier_price, 0)) * s.quantity';
     final result = await _db.execute('''
       SELECT
         COUNT(*)::int,
-        COALESCE(SUM(total), 0)::float8,
-        COALESCE(SUM(total) FILTER (WHERE created_at::date = current_date), 0)::float8,
-        COALESCE(SUM(total) FILTER (
-          WHERE date_trunc('month', created_at) = date_trunc('month', now())
-        ), 0)::float8,
-        COALESCE(SUM(total) FILTER (
-          WHERE date_trunc('year', created_at) = date_trunc('year', now())
-        ), 0)::float8
-      FROM sales
-      WHERE voided_at IS NULL
+        COALESCE(SUM(s.total), 0)::float8,
+        COALESCE(SUM(s.total) FILTER (WHERE s.created_at::date = current_date), 0)::float8,
+        COALESCE(SUM($profit) FILTER (WHERE s.created_at::date = current_date), 0)::float8,
+        COALESCE(SUM(s.total) FILTER (WHERE s.created_at >= current_date - interval '6 days'), 0)::float8,
+        COALESCE(SUM($profit) FILTER (WHERE s.created_at >= current_date - interval '6 days'), 0)::float8,
+        COALESCE(SUM(s.total) FILTER (WHERE date_trunc('month', s.created_at) = date_trunc('month', now())), 0)::float8,
+        COALESCE(SUM($profit) FILTER (WHERE date_trunc('month', s.created_at) = date_trunc('month', now())), 0)::float8,
+        COALESCE(SUM(s.total) FILTER (WHERE date_trunc('quarter', s.created_at) = date_trunc('quarter', now())), 0)::float8,
+        COALESCE(SUM($profit) FILTER (WHERE date_trunc('quarter', s.created_at) = date_trunc('quarter', now())), 0)::float8,
+        COALESCE(SUM(s.total) FILTER (WHERE date_trunc('year', s.created_at) = date_trunc('year', now())), 0)::float8,
+        COALESCE(SUM($profit) FILTER (WHERE date_trunc('year', s.created_at) = date_trunc('year', now())), 0)::float8
+      FROM sales s
+      JOIN products p ON p.id = s.product_id
+      WHERE s.voided_at IS NULL
     ''');
     final row = result.first;
     return SalesSummary(
       count: row[0]! as int,
       totalAll: row[1]! as double,
       totalToday: row[2]! as double,
-      totalMonth: row[3]! as double,
-      totalYear: row[4]! as double,
+      profitToday: row[3]! as double,
+      totalWeek: row[4]! as double,
+      profitWeek: row[5]! as double,
+      totalMonth: row[6]! as double,
+      profitMonth: row[7]! as double,
+      totalQuarter: row[8]! as double,
+      profitQuarter: row[9]! as double,
+      totalYear: row[10]! as double,
+      profitYear: row[11]! as double,
     );
   }
 
