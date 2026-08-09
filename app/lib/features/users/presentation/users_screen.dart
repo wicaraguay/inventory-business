@@ -250,7 +250,7 @@ class _RoleChip extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
       ),
       child: Text(
-        isOwner ? 'Dueño' : 'Empleado',
+        isOwner ? 'Propietario' : 'Empleado',
         style: TextStyle(
             color: color, fontWeight: FontWeight.w600, fontSize: 12),
       ),

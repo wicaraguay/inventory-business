@@ -193,7 +193,7 @@ class _UserFooter extends ConsumerWidget {
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(fontWeight: FontWeight.w600)),
               Text(
-                user.isOwner ? 'Dueño' : 'Empleado',
+                user.isOwner ? 'Propietario' : 'Empleado',
                 style: TextStyle(
                     fontSize: 12,
                     color: AppColors.onSurface.withValues(alpha: 0.6)),

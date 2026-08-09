@@ -111,7 +111,7 @@ class _CreateUserSheetState extends State<CreateUserSheet> {
               showSelectedIcon: false,
               segments: const [
                 ButtonSegment(value: 'employee', label: Text('Empleado')),
-                ButtonSegment(value: 'owner', label: Text('Dueño')),
+                ButtonSegment(value: 'owner', label: Text('Propietario')),
               ],
               selected: {_role},
               onSelectionChanged: (s) => setState(() => _role = s.first),

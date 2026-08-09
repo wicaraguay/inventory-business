@@ -47,7 +47,9 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
   // Range generator inputs.
   final _from = TextEditingController(text: '34');
   final _to = TextEditingController(text: '40');
-  final _qtyEach = TextEditingController(text: '1');
+  // Default 0 pairs: generate the WHOLE size run at zero stock, then bump the
+  // ones you actually received. Avoids creating one-off products later.
+  final _qtyEach = TextEditingController(text: '0');
   final _manualSize = TextEditingController();
 
   bool _prefixTouched = false;
@@ -157,15 +159,15 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
     final size = raw.trim();
     if (size.isEmpty) return;
     setState(() {
-      final qty = int.tryParse(_qtyEach.text.trim()) ?? 1;
-      _sizes[size] = _sizes[size] ?? (qty < 1 ? 1 : qty);
+      final qty = int.tryParse(_qtyEach.text.trim()) ?? 0;
+      _sizes[size] = _sizes[size] ?? (qty < 0 ? 0 : qty);
     });
   }
 
   void _generateRange() {
     final from = int.tryParse(_from.text.trim());
     final to = int.tryParse(_to.text.trim());
-    final qty = int.tryParse(_qtyEach.text.trim()) ?? 1;
+    final qty = int.tryParse(_qtyEach.text.trim()) ?? 0;
     if (from == null || to == null || from > to) {
       _snack('Rango de tallas inválido');
       return;
@@ -176,7 +178,7 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
     }
     setState(() {
       for (var n = from; n <= to; n++) {
-        _sizes['$n'] = _sizes['$n'] ?? (qty < 1 ? 1 : qty);
+        _sizes['$n'] = _sizes['$n'] ?? (qty < 0 ? 0 : qty);
       }
     });
   }
@@ -266,6 +268,18 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
                           ? 'El modelo es obligatorio'
                           : null,
                     ),
+                    if (widget.showCost) ...[
+                      const SizedBox(height: 8),
+                      TextFormField(
+                        controller: _supplierPrice,
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'Precio de proveedor (costo)',
+                          helperText: 'Privado — solo lo ves vos (el propietario).',
+                          helperStyle: muted,
+                        ),
+                      ),
+                    ],
                     const SizedBox(height: 8),
                     Row(
                       children: [
@@ -288,18 +302,6 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
                         ),
                       ],
                     ),
-                    if (widget.showCost) ...[
-                      const SizedBox(height: 8),
-                      TextFormField(
-                        controller: _supplierPrice,
-                        keyboardType: TextInputType.number,
-                        decoration: InputDecoration(
-                          labelText: 'Precio de proveedor (costo)',
-                          helperText: 'Privado — solo lo ves vos (el dueño).',
-                          helperStyle: muted,
-                        ),
-                      ),
-                    ],
                     const SizedBox(height: 16),
                     Text('Tallas',
                         style: Theme.of(context).textTheme.titleMedium),
@@ -404,7 +406,7 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
           const SizedBox(width: 12),
           IconButton(
             visualDensity: VisualDensity.compact,
-            onPressed: qty <= 1
+            onPressed: qty <= 0
                 ? null
                 : () => setState(() => _sizes[size] = qty - 1),
             icon: const Icon(Icons.remove_circle_outline),

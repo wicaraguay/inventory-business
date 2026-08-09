@@ -37,7 +37,7 @@ class _MovementSheetState extends State<MovementSheet> {
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.of(context).viewInsets.bottom;
-    final title = widget.isEntry ? 'Registrar entrada' : 'Registrar salida';
+    final title = widget.isEntry ? 'Registrar Stock' : 'Salida de Stock';
     return Padding(
       padding: EdgeInsets.fromLTRB(16, 16, 16, 16 + bottomInset),
       child: Form(
@@ -67,7 +67,8 @@ class _MovementSheetState extends State<MovementSheet> {
             const SizedBox(height: 8),
             TextFormField(
               controller: _note,
-              decoration: const InputDecoration(labelText: 'Nota (opcional)'),
+              decoration:
+                  const InputDecoration(labelText: 'Descripción (opcional)'),
             ),
             const SizedBox(height: 16),
             FilledButton(

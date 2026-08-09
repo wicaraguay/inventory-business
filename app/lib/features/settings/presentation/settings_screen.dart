@@ -121,6 +121,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     final base = ref.watch(apiBaseUrlProvider);
+    final alertsEnabled = ref.watch(alertsEnabledProvider);
     return Padding(
       padding: const EdgeInsets.all(24),
       child: ListView(
@@ -224,10 +225,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           ),
           const SizedBox(height: 16),
           _SettingsCard(
-            title: 'Preferencias',
+            title: 'Stock bajo',
             children: [
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Activar alertas de stock bajo'),
+                subtitle: const Text(
+                  'Desactivalas temporalmente para no llenarte de avisos '
+                  '(ej. mientras cargás productos en 0).',
+                ),
+                value: alertsEnabled,
+                onChanged: (v) =>
+                    ref.read(alertsEnabledProvider.notifier).set(v),
+              ),
+              const Divider(height: 20),
               TextField(
                 controller: _threshold,
+                enabled: alertsEnabled,
                 keyboardType: TextInputType.number,
                 decoration: const InputDecoration(
                   labelText: 'Umbral de stock bajo (global)',
@@ -235,8 +249,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Se avisa cuando cualquier producto queda en o por debajo de '
-                'este número. Aplica a todos los productos.',
+                alertsEnabled
+                    ? 'Se avisa cuando cualquier producto queda en o por debajo '
+                        'de este número. Aplica a todos los productos.'
+                    : 'Alertas desactivadas: no vas a recibir avisos de stock '
+                        'bajo en este dispositivo.',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.onSurface.withValues(alpha: 0.6),
@@ -246,9 +263,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               Align(
                 alignment: Alignment.centerRight,
                 child: FilledButton(
-                    onPressed: () {
-                      _saveThreshold();
-                    },
+                    onPressed: alertsEnabled ? _saveThreshold : null,
                     child: const Text('Guardar')),
               ),
             ],
@@ -316,16 +331,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           _SettingsCard(
             title: 'Notificaciones',
             children: [
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Alertas de stock bajo'),
-                subtitle: const Text(
-                  'Muestra la campana de avisos en este dispositivo',
-                ),
-                value: ref.watch(alertsEnabledProvider),
-                onChanged: (v) =>
-                    ref.read(alertsEnabledProvider.notifier).set(v),
-              ),
               SwitchListTile(
                 contentPadding: EdgeInsets.zero,
                 title: const Text('Avisos por WhatsApp'),

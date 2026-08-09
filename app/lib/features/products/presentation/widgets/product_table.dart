@@ -19,6 +19,7 @@ class ProductTable extends StatelessWidget {
     this.selectionActive = false,
     this.selectedIds = const {},
     this.onToggleSelect,
+    this.onOpen,
     super.key,
   });
 
@@ -39,6 +40,9 @@ class ProductTable extends StatelessWidget {
   final bool selectionActive;
   final Set<String> selectedIds;
   final void Function(Product product)? onToggleSelect;
+
+  /// Tapping a row (outside selection mode) opens the product detail.
+  final void Function(Product product)? onOpen;
 
   StockStatus _status(Product p) {
     if (p.currentStock <= 0) return StockStatus.out;
@@ -100,9 +104,15 @@ class ProductTable extends StatelessWidget {
                             menu: menu,
                             leading: leading,
                           );
-                    if (!selectionActive) return row;
+                    if (selectionActive) {
+                      return InkWell(
+                        onTap: () => onToggleSelect?.call(product),
+                        child: row,
+                      );
+                    }
+                    if (onOpen == null) return row;
                     return InkWell(
-                      onTap: () => onToggleSelect?.call(product),
+                      onTap: () => onOpen!.call(product),
                       child: row,
                     );
                   },
@@ -341,14 +351,14 @@ class _RowMenu extends StatelessWidget {
             value: 'entry',
             child: ListTile(
               leading: Icon(Icons.add, color: AppColors.success),
-              title: Text('Registrar entrada'),
+              title: Text('Registrar Stock'),
             ),
           ),
           PopupMenuItem(
             value: 'exit',
             child: ListTile(
               leading: Icon(Icons.remove, color: AppColors.danger),
-              title: Text('Registrar salida'),
+              title: Text('Salida de Stock'),
             ),
           ),
           PopupMenuItem(

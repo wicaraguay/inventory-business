@@ -12,6 +12,7 @@ import 'package:inventy_app/features/products/domain/product.dart';
 import 'package:inventy_app/features/products/presentation/products_providers.dart';
 import 'package:inventy_app/features/products/presentation/widgets/bulk_create_sheet.dart';
 import 'package:inventy_app/features/products/presentation/widgets/create_product_sheet.dart';
+import 'package:inventy_app/features/products/presentation/widgets/product_detail_sheet.dart';
 import 'package:inventy_app/features/products/presentation/widgets/product_table.dart';
 import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
@@ -67,6 +68,7 @@ class ProductsScreen extends ConsumerWidget {
                       onToggleSelect: (product) => ref
                           .read(labelSelectionProvider.notifier)
                           .toggle(product.id),
+                      onOpen: (product) => _openDetail(context, ref, product),
                       onMovement: (product, isEntry) =>
                           _openMovement(context, ref, product, isEntry),
                       onLabel: (product) => _openLabel(context, product),
@@ -271,6 +273,31 @@ class ProductsScreen extends ConsumerWidget {
             message: 'No se pudo eliminar: $e', kind: AlertKind.error);
       }
     }
+  }
+
+  /// Tapping a product opens its detail: prices + every size of the same model
+  /// with its stock. Siblings are grouped by modelId (falling back to name).
+  void _openDetail(BuildContext context, WidgetRef ref, Product product) {
+    final all = ref.read(productsProvider).asData?.value ?? const <Product>[];
+    final siblings = [
+      for (final p in all)
+        if (product.modelId != null
+            ? p.modelId == product.modelId
+            : p.name == product.name)
+          p,
+    ];
+    final isOwner = ref.read(currentUserProvider)?.isOwner ?? false;
+    final threshold = ref.read(settingsProvider).defaultThreshold;
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => ProductDetailSheet(
+        product: product,
+        siblings: siblings.isEmpty ? [product] : siblings,
+        threshold: threshold,
+        showCost: isOwner,
+      ),
+    );
   }
 
   void _openLabel(BuildContext context, Product product) {

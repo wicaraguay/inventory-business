@@ -161,7 +161,7 @@ class _Welcome extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineLarge,
               ),
-              Text(isOwner ? 'Dueño' : 'Empleado',
+              Text(isOwner ? 'Propietario' : 'Empleado',
                   style: const TextStyle(
                       color: AppColors.primary, fontWeight: FontWeight.w600)),
             ],
