@@ -126,3 +126,14 @@ final productsProvider =
     AsyncNotifierProvider<ProductsNotifier, List<Product>>(
   ProductsNotifier.new,
 );
+
+/// Live text filter for the inventory list (matches name / size / SKU).
+class ProductSearchNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void set(String query) => state = query;
+}
+
+final productSearchProvider =
+    NotifierProvider<ProductSearchNotifier, String>(ProductSearchNotifier.new);

@@ -31,6 +31,14 @@ class ProductsScreen extends ConsumerWidget {
     // Owner OR an employee the owner enabled for inventory management.
     final canManage = ref.watch(currentUserProvider)?.canManage ?? false;
     final selection = ref.watch(labelSelectionProvider);
+    final query = ref.watch(productSearchProvider).trim().toLowerCase();
+    final hasProducts = products.asData?.value.isNotEmpty ?? false;
+    // Web: the search sits inside the header toolbar. App: a full-width field
+    // below the header (no extra button). Only shown when there's something
+    // to search and we're not picking labels.
+    final wide = MediaQuery.sizeOf(context).width >= 640;
+    final showSearch = hasProducts && !selection.active;
+
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -54,29 +62,48 @@ class ProductsScreen extends ConsumerWidget {
               onIdentify: () => Navigator.of(context).push(
                 MaterialPageRoute<void>(builder: (_) => const IdentifyScreen()),
               ),
+              // Web only: inline search in the toolbar.
+              search: (wide && showSearch)
+                  ? const _InventorySearch(key: ValueKey('search-web'))
+                  : null,
             ),
+          // App only: full-width search below the header.
+          if (!wide && showSearch) ...[
+            const SizedBox(height: 12),
+            const _InventorySearch(key: ValueKey('search-app')),
+          ],
           const SizedBox(height: 16),
           Expanded(
             child: products.when(
-              data: (items) => items.isEmpty
-                  ? _Empty(canCreate: canManage)
-                  : ProductTable(
-                      products: items,
-                      threshold: ref.watch(settingsProvider).defaultThreshold,
-                      readOnly: !canManage,
-                      selectionActive: selection.active,
-                      selectedIds: selection.ids,
-                      onToggleSelect: (product) => ref
-                          .read(labelSelectionProvider.notifier)
-                          .toggle(product.id),
-                      onOpen: (product) => _openDetail(context, ref, product),
-                      onMovement: (product, isEntry) =>
-                          _openMovement(context, ref, product, isEntry),
-                      onLabel: (product) => _openLabel(context, product),
-                      onEdit: (product) => _openEdit(context, ref, product),
-                      onDelete: (product) =>
-                          _confirmDelete(context, ref, product),
-                    ),
+              data: (items) {
+                if (items.isEmpty) return _Empty(canCreate: canManage);
+                final filtered = query.isEmpty
+                    ? items
+                    : [
+                        for (final p in items)
+                          if (p.name.toLowerCase().contains(query) ||
+                              (p.detail ?? '').toLowerCase().contains(query) ||
+                              p.sku.toLowerCase().contains(query))
+                            p,
+                      ];
+                if (filtered.isEmpty) return _NoResults(query: query);
+                return ProductTable(
+                  products: filtered,
+                  threshold: ref.watch(settingsProvider).defaultThreshold,
+                  readOnly: !canManage,
+                  selectionActive: selection.active,
+                  selectedIds: selection.ids,
+                  onToggleSelect: (product) => ref
+                      .read(labelSelectionProvider.notifier)
+                      .toggle(product.id),
+                  onOpen: (product) => _openDetail(context, ref, product),
+                  onMovement: (product, isEntry) =>
+                      _openMovement(context, ref, product, isEntry),
+                  onLabel: (product) => _openLabel(context, product),
+                  onEdit: (product) => _openEdit(context, ref, product),
+                  onDelete: (product) => _confirmDelete(context, ref, product),
+                );
+              },
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Center(child: Text('Error: $error')),
             ),
@@ -401,6 +428,7 @@ class _Header extends StatelessWidget {
     required this.onPrintAll,
     required this.onSelect,
     required this.onIdentify,
+    this.search,
   });
 
   final int? count;
@@ -409,6 +437,9 @@ class _Header extends StatelessWidget {
   final VoidCallback onPrintAll;
   final VoidCallback onSelect;
   final VoidCallback onIdentify;
+
+  /// Web only: an inline search field placed in the actions toolbar.
+  final Widget? search;
 
   @override
   Widget build(BuildContext context) {
@@ -485,6 +516,7 @@ class _Header extends StatelessWidget {
                 alignment: WrapAlignment.end,
                 crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
+                  if (search != null) SizedBox(width: 240, child: search),
                   identify,
                   if (owner) ...[select, printAll, add],
                 ],
@@ -559,6 +591,91 @@ class _Empty extends StatelessWidget {
             canCreate
                 ? 'Creá el primero con "Agregar producto".'
                 : 'Todavía no hay productos cargados.',
+            style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Always-visible inline search field (NOT a button). Filters the list live by
+/// name, size or SKU. Its controller seeds from the shared query so swapping
+/// between the web (toolbar) and app (below header) spots keeps the text.
+class _InventorySearch extends ConsumerStatefulWidget {
+  const _InventorySearch({super.key});
+
+  @override
+  ConsumerState<_InventorySearch> createState() => _InventorySearchState();
+}
+
+class _InventorySearchState extends ConsumerState<_InventorySearch> {
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: ref.read(productSearchProvider));
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final query = ref.watch(productSearchProvider);
+    return TextField(
+      controller: _controller,
+      textInputAction: TextInputAction.search,
+      onChanged: (v) => ref.read(productSearchProvider.notifier).set(v),
+      decoration: InputDecoration(
+        isDense: true,
+        hintText: 'Buscar por nombre, talla o código',
+        prefixIcon: const Icon(Icons.search, size: 20),
+        suffixIcon: query.isEmpty
+            ? null
+            : IconButton(
+                tooltip: 'Limpiar',
+                icon: const Icon(Icons.close, size: 18),
+                onPressed: () {
+                  _controller.clear();
+                  ref.read(productSearchProvider.notifier).set('');
+                },
+              ),
+        filled: true,
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+    );
+  }
+}
+
+/// Shown when a search matches nothing (there ARE products, just not these).
+class _NoResults extends StatelessWidget {
+  const _NoResults({required this.query});
+
+  final String query;
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.search_off, size: 48, color: AppColors.inputBorder),
+          const SizedBox(height: 12),
+          Text('Sin resultados',
+              style: Theme.of(context).textTheme.headlineMedium),
+          const SizedBox(height: 4),
+          Text(
+            'No hay productos que coincidan con "$query".',
+            textAlign: TextAlign.center,
             style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
           ),
         ],
