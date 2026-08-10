@@ -7,6 +7,7 @@ class ProductWithStock {
     required this.currentStock,
     this.hasImage = false,
     this.imageVersion = 0,
+    this.labeled = true,
   });
 
   final Product product;
@@ -17,4 +18,8 @@ class ProductWithStock {
 
   /// Epoch seconds of the last image change — used to cache-bust the image URL.
   final int imageVersion;
+
+  /// Whether the product's QR label has been printed AND applied. New products
+  /// start false (pending); the owner marks them done after labeling.
+  final bool labeled;
 }

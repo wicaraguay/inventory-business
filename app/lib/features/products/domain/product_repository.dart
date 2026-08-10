@@ -40,6 +40,9 @@ abstract interface class ProductRepository {
 
   Future<void> delete(String id);
 
+  /// Marks products as labeled (QR printed + applied) or back to pending.
+  Future<void> markLabeled(List<String> ids, {required bool labeled});
+
   /// Uploads (or replaces) a product's image with the given (compressed) bytes.
   Future<void> uploadImage(String id, Uint8List bytes);
 

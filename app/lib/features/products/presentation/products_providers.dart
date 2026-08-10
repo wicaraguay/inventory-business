@@ -111,6 +111,15 @@ class ProductsNotifier extends AsyncNotifier<List<Product>> {
     await future;
   }
 
+  /// Marks products as labeled (QR printed + applied) or back to pending.
+  Future<void> markLabeled(List<String> ids, {required bool labeled}) async {
+    await ref
+        .read(productRepositoryProvider)
+        .markLabeled(ids, labeled: labeled);
+    ref.invalidateSelf();
+    await future;
+  }
+
   Future<void> delete(String id) async {
     await ref.read(productRepositoryProvider).delete(id);
     // The product is gone on the server: drop it from the in-memory list rather

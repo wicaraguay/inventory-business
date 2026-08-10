@@ -112,6 +112,14 @@ class HttpProductRepository implements ProductRepository {
   }
 
   @override
+  Future<void> markLabeled(List<String> ids, {required bool labeled}) async {
+    await _dio.post<void>(
+      '/products/mark-labeled',
+      data: {'ids': ids, 'labeled': labeled},
+    );
+  }
+
+  @override
   Future<void> uploadImage(String id, Uint8List bytes) async {
     await _dio.put<void>(
       '/products/$id/image',

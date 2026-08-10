@@ -29,6 +29,7 @@ class Product {
     this.hasImage = false,
     this.imageVersion = 0,
     this.availableSizes = const [],
+    this.labeled = true,
   });
 
   factory Product.fromJson(Map<String, dynamic> json) => Product(
@@ -48,6 +49,9 @@ class Product {
                 ?.map((e) => ModelSize.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             const [],
+        // Absent on endpoints that don't track it → treat as labeled (not
+        // pending), so only the inventory list surfaces pending items.
+        labeled: json['labeled'] as bool? ?? true,
       );
 
   final String id;
@@ -73,4 +77,8 @@ class Product {
 
   /// The model's sizes (with stock). Only populated when resolved by scanning.
   final List<ModelSize> availableSizes;
+
+  /// Whether this product's QR label has been printed AND applied. New products
+  /// are pending (false) until the owner marks them done.
+  final bool labeled;
 }

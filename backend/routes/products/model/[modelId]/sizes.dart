@@ -76,5 +76,6 @@ Map<String, dynamic> _json(
       'currentStock': stock,
       'hasImage': true,
       'imageVersion': 0,
+      'labeled': false, // new sizes are pending until labeled
       if (withSupplier) 'supplierPrice': p.supplierPrice,
     };

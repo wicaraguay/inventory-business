@@ -256,11 +256,25 @@ class PostgresProductRepository implements ProductRepository {
     );
   }
 
+  @override
+  Future<void> markLabeled(List<String> ids, {required bool labeled}) async {
+    if (ids.isEmpty) return;
+    final ph = [for (var i = 0; i < ids.length; i++) '@i$i'].join(', ');
+    await _db.execute(
+      Sql.named(
+        'UPDATE products SET label_printed_at = '
+        "${labeled ? 'now()' : 'NULL'} WHERE id::text IN ($ph)",
+      ),
+      parameters: {for (var i = 0; i < ids.length; i++) 'i$i': ids[i]},
+    );
+  }
+
   // Extra read columns appended after $_cols (index 9+): stock, image flag,
   // and an image "version" (epoch seconds) used to cache-bust the image URL.
   static const _readExtras = 'COALESCE(ps.current_stock, 0), '
       '(pi.product_id IS NOT NULL) AS has_image, '
-      'COALESCE(extract(epoch FROM pi.updated_at)::bigint, 0) AS image_version';
+      'COALESCE(extract(epoch FROM pi.updated_at)::bigint, 0) AS image_version, '
+      '(p.label_printed_at IS NOT NULL) AS labeled';
 
   static const _readJoins =
       'LEFT JOIN product_stock ps ON ps.product_id = p.id '
@@ -320,6 +334,7 @@ class PostgresProductRepository implements ProductRepository {
         currentStock: row[9]! as int,
         hasImage: row[10]! as bool,
         imageVersion: row[11]! as int,
+        labeled: row[12]! as bool,
       );
 
   Product _map(ResultRow row) => Product(

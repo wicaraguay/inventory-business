@@ -72,6 +72,9 @@ class _FakeProductRepository implements ProductRepository {
   Future<void> delete(String id) async => _items.removeWhere((p) => p.id == id);
 
   @override
+  Future<void> markLabeled(List<String> ids, {required bool labeled}) async {}
+
+  @override
   Future<void> uploadImage(String id, Uint8List bytes) async {}
 
   @override

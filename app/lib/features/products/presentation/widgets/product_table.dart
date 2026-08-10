@@ -20,6 +20,7 @@ class ProductTable extends StatelessWidget {
     this.selectedIds = const {},
     this.onToggleSelect,
     this.onOpen,
+    this.onMarkLabeled,
     super.key,
   });
 
@@ -43,6 +44,9 @@ class ProductTable extends StatelessWidget {
 
   /// Tapping a row (outside selection mode) opens the product detail.
   final void Function(Product product)? onOpen;
+
+  /// Marks a product as labeled (true) or pending (false), from the row menu.
+  final void Function(Product product, bool labeled)? onMarkLabeled;
 
   StockStatus _status(Product p) {
     if (p.currentStock <= 0) return StockStatus.out;
@@ -88,6 +92,7 @@ class ProductTable extends StatelessWidget {
                             onLabel: onLabel,
                             onEdit: onEdit,
                             onDelete: onDelete,
+                            onMarkLabeled: onMarkLabeled,
                           );
                     final row = narrow
                         ? _MobileRow(
@@ -181,11 +186,18 @@ class _MobileRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  product.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(
+                        product.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                    if (!product.labeled) const _PendingChip(),
+                  ],
                 ),
                 if (product.detail != null && product.detail!.isNotEmpty)
                   Text(
@@ -253,13 +265,14 @@ class _DataRow extends StatelessWidget {
               children: [
                 ProductThumbnail(product: product, size: 40),
                 const SizedBox(width: 10),
-                Expanded(
+                Flexible(
                   child: Text(
                     product.name,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                 ),
+                if (!product.labeled) const _PendingChip(),
               ],
             ),
           ),
@@ -325,6 +338,7 @@ class _RowMenu extends StatelessWidget {
     required this.onLabel,
     required this.onEdit,
     required this.onDelete,
+    this.onMarkLabeled,
   });
 
   final Product product;
@@ -332,6 +346,7 @@ class _RowMenu extends StatelessWidget {
   final void Function(Product product) onLabel;
   final void Function(Product product) onEdit;
   final void Function(Product product) onDelete;
+  final void Function(Product product, bool labeled)? onMarkLabeled;
 
   @override
   Widget build(BuildContext context) {
@@ -343,40 +358,53 @@ class _RowMenu extends StatelessWidget {
           'entry' => onMovement(product, true),
           'exit' => onMovement(product, false),
           'label' => onLabel(product),
+          'mark' => onMarkLabeled?.call(product, !product.labeled),
           'edit' => onEdit(product),
           _ => onDelete(product),
         },
-        itemBuilder: (_) => const [
-          PopupMenuItem(
+        itemBuilder: (_) => [
+          const PopupMenuItem(
             value: 'entry',
             child: ListTile(
               leading: Icon(Icons.add, color: AppColors.success),
               title: Text('Registrar Stock'),
             ),
           ),
-          PopupMenuItem(
+          const PopupMenuItem(
             value: 'exit',
             child: ListTile(
               leading: Icon(Icons.remove, color: AppColors.danger),
               title: Text('Salida de Stock'),
             ),
           ),
-          PopupMenuItem(
+          const PopupMenuItem(
             value: 'label',
             child: ListTile(
               leading: Icon(Icons.qr_code_2),
               title: Text('Imprimir etiqueta QR'),
             ),
           ),
-          PopupMenuDivider(),
-          PopupMenuItem(
+          if (onMarkLabeled != null)
+            PopupMenuItem(
+              value: 'mark',
+              child: ListTile(
+                leading: Icon(product.labeled
+                    ? Icons.label_off_outlined
+                    : Icons.check_circle_outline),
+                title: Text(product.labeled
+                    ? 'Marcar sin etiqueta'
+                    : 'Marcar como etiquetada'),
+              ),
+            ),
+          const PopupMenuDivider(),
+          const PopupMenuItem(
             value: 'edit',
             child: ListTile(
               leading: Icon(Icons.edit_outlined),
               title: Text('Editar'),
             ),
           ),
-          PopupMenuItem(
+          const PopupMenuItem(
             value: 'delete',
             child: ListTile(
               leading: Icon(Icons.delete_outline, color: AppColors.danger),
@@ -384,6 +412,32 @@ class _RowMenu extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Small amber badge marking a product whose QR label hasn't been printed and
+/// applied yet — so the owner can tell new registrations from done ones.
+class _PendingChip extends StatelessWidget {
+  const _PendingChip();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: AppColors.warning.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: Text(
+        'Sin etiqueta',
+        style: TextStyle(
+          color: AppColors.warning,
+          fontSize: 10,
+          fontWeight: FontWeight.w700,
+        ),
       ),
     );
   }

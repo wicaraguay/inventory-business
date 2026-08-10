@@ -41,6 +41,9 @@ abstract interface class ProductRepository {
   /// Deletes a product (cascades to its movements and sales).
   Future<void> delete(String id);
 
+  /// Marks products as labeled (QR printed + applied) or back to pending.
+  Future<void> markLabeled(List<String> ids, {required bool labeled});
+
   /// All products, each with its current stock.
   Future<List<ProductWithStock>> listWithStock();
 

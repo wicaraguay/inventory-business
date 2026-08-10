@@ -160,7 +160,8 @@ Map<String, dynamic> _withStockJson(
       hasImage: p.hasImage,
       imageVersion: p.imageVersion,
       withSupplier: withSupplier,
-    );
+    )
+      ..['labeled'] = p.labeled;
 
 Map<String, dynamic> _productJson(
   Product p,
@@ -181,6 +182,9 @@ Map<String, dynamic> _productJson(
       'currentStock': currentStock,
       'hasImage': hasImage,
       'imageVersion': imageVersion,
+      // Freshly created/edited products are pending until labeled. The list
+      // endpoint overrides this with the real value via _withStockJson.
+      'labeled': false,
       // Cost price only for the owner; never leaves the server for employees.
       if (withSupplier) 'supplierPrice': p.supplierPrice,
     };

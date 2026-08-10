@@ -8,6 +8,7 @@ import 'package:inventy_backend/src/application/change_password.dart';
 import 'package:inventy_backend/src/application/create_product.dart';
 import 'package:inventy_backend/src/application/add_model_sizes.dart';
 import 'package:inventy_backend/src/application/create_products_bulk.dart';
+import 'package:inventy_backend/src/application/mark_products_labeled.dart';
 import 'package:inventy_backend/src/application/create_user.dart';
 import 'package:inventy_backend/src/application/delete_product.dart';
 import 'package:inventy_backend/src/application/delete_product_image.dart';
@@ -71,6 +72,13 @@ Handler middleware(Handler handler) {
       .use(
         provider<Future<AddModelSizes>>(
           (_) async => AddModelSizes(
+            PostgresProductRepository(await Database.connection()),
+          ),
+        ),
+      )
+      .use(
+        provider<Future<MarkProductsLabeled>>(
+          (_) async => MarkProductsLabeled(
             PostgresProductRepository(await Database.connection()),
           ),
         ),

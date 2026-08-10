@@ -56,7 +56,7 @@ class ProductsScreen extends ConsumerWidget {
               count: products.asData?.value.length,
               owner: canManage,
               onAdd: () => _openBulkCreate(context, ref),
-              onPrintAll: () => _printAll(context, ref),
+              onPrintPending: () => _printPending(context, ref),
               onSelect: () =>
                   ref.read(labelSelectionProvider.notifier).start(),
               onIdentify: () => Navigator.of(context).push(
@@ -102,6 +102,9 @@ class ProductsScreen extends ConsumerWidget {
                   onLabel: (product) => _openLabel(context, product),
                   onEdit: (product) => _openEdit(context, ref, product),
                   onDelete: (product) => _confirmDelete(context, ref, product),
+                  onMarkLabeled: (product, labeled) => ref
+                      .read(productsProvider.notifier)
+                      .markLabeled([product.id], labeled: labeled),
                 );
               },
               loading: () => const Center(child: CircularProgressIndicator()),
@@ -162,9 +165,9 @@ class ProductsScreen extends ConsumerWidget {
           kind: AlertKind.success,
         );
       }
-      // Print one QR per pair (fixed 12-column format); warns if all are 0.
+      // Print one QR per pair, then offer to mark the new batch as labeled.
       if (context.mounted) {
-        await _printLabels(context, created);
+        await _printAndOfferMark(context, ref, created);
       }
     } on Object catch (e) {
       if (context.mounted) {
@@ -206,21 +209,83 @@ class ProductsScreen extends ConsumerWidget {
     }
   }
 
-  /// Prints one QR per pair in stock and warns when there's nothing to label.
-  Future<void> _printLabels(BuildContext context, List<Product> items) async {
+  /// Prints one QR per pair in stock; then — only if any printed product was
+  /// still pending — asks whether they were ACTUALLY printed+applied (generating
+  /// the PDF is not the same as printing) and marks them labeled if confirmed.
+  Future<void> _printAndOfferMark(
+    BuildContext context,
+    WidgetRef ref,
+    List<Product> items,
+  ) async {
     final printed = await printProductLabels(items);
-    if (printed == 0 && context.mounted) {
+    if (!context.mounted) return;
+    if (printed == 0) {
       await showAppAlert(context,
           message: 'Estas tallas están en 0 — no hay pares para etiquetar. '
               'Cargá stock (Registrar Stock) y volvé a imprimir.',
           kind: AlertKind.info);
+      return;
+    }
+    final pendingIds = [for (final p in items) if (!p.labeled) p.id];
+    if (pendingIds.isEmpty) return; // a reprint of already-labeled items
+    final done = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        icon: const Icon(Icons.print_outlined,
+            color: AppColors.primary, size: 40),
+        title: const Text('¿Ya las imprimiste?'),
+        content: Text(
+          'Generé el PDF con las etiquetas. ¿Ya imprimiste y pegaste las de '
+          'los ${pendingIds.length} producto(s) nuevos?\n\n'
+          'Si solo estabas verificando el PDF, elegí "Todavía no" y siguen '
+          'pendientes.',
+          textAlign: TextAlign.center,
+        ),
+        actionsAlignment: MainAxisAlignment.center,
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Todavía no')),
+          FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Sí, marcarlas')),
+        ],
+      ),
+    );
+    if (done == true) {
+      await ref
+          .read(productsProvider.notifier)
+          .markLabeled(pendingIds, labeled: true);
+      if (context.mounted) {
+        await showAppAlert(context,
+            message: '${pendingIds.length} producto(s) marcados como '
+                'etiquetados.',
+            kind: AlertKind.success);
+      }
     }
   }
 
-  Future<void> _printAll(BuildContext context, WidgetRef ref) async {
-    final products = ref.read(productsProvider).asData?.value ?? const [];
-    if (products.isEmpty) return;
-    await _printLabels(context, products);
+  /// Prints ONLY the pending labels (registered but not yet labeled, with stock)
+  /// so re-labeling never re-prints what's already done.
+  Future<void> _printPending(BuildContext context, WidgetRef ref) async {
+    final all = ref.read(productsProvider).asData?.value ?? const <Product>[];
+    final pending = [
+      for (final p in all)
+        if (!p.labeled && p.currentStock > 0) p,
+    ];
+    final pendingNoStock =
+        all.where((p) => !p.labeled && p.currentStock <= 0).length;
+    if (pending.isEmpty) {
+      await showAppAlert(context,
+          message: pendingNoStock > 0
+              ? 'No hay etiquetas pendientes con stock. Tenés $pendingNoStock '
+                  'talla(s) sin etiqueta pero en 0 — cargá stock y volvé.'
+              : 'No hay etiquetas pendientes: todo tu inventario ya está '
+                  'etiquetado. Para reimprimir alguna, usá "Elegir e imprimir".',
+          kind: AlertKind.info);
+      return;
+    }
+    await _printAndOfferMark(context, ref, pending);
   }
 
   /// Print QR labels for just the products the user ticked. Same fixed
@@ -235,7 +300,7 @@ class ProductsScreen extends ConsumerWidget {
           kind: AlertKind.info);
       return;
     }
-    await _printLabels(context, chosen);
+    await _printAndOfferMark(context, ref, chosen);
     ref.read(labelSelectionProvider.notifier).cancel();
   }
 
@@ -397,7 +462,7 @@ class ProductsScreen extends ConsumerWidget {
                 'Imprimí sus QR a continuación.',
             kind: AlertKind.success);
       }
-      if (context.mounted) await _printLabels(context, created);
+      if (context.mounted) await _printAndOfferMark(context, ref, created);
     } on Object catch (e) {
       if (context.mounted) {
         await showAppAlert(context,
@@ -431,7 +496,7 @@ class _Header extends StatelessWidget {
     required this.count,
     required this.owner,
     required this.onAdd,
-    required this.onPrintAll,
+    required this.onPrintPending,
     required this.onSelect,
     required this.onIdentify,
     this.search,
@@ -440,7 +505,7 @@ class _Header extends StatelessWidget {
   final int? count;
   final bool owner;
   final VoidCallback onAdd;
-  final VoidCallback onPrintAll;
+  final VoidCallback onPrintPending;
   final VoidCallback onSelect;
   final VoidCallback onIdentify;
 
@@ -470,10 +535,10 @@ class _Header extends StatelessWidget {
       icon: const Icon(Icons.add),
       label: const Text('Agregar producto'),
     );
-    final printAll = OutlinedButton.icon(
-      onPressed: hasProducts ? onPrintAll : null,
+    final printPending = OutlinedButton.icon(
+      onPressed: hasProducts ? onPrintPending : null,
       icon: const Icon(Icons.qr_code_2),
-      label: const Text('Imprimir etiquetas'),
+      label: const Text('Imprimir pendientes'),
     );
     // Pick a subset (e.g. just two shoes) and print only their QRs.
     final select = OutlinedButton.icon(
@@ -500,7 +565,7 @@ class _Header extends StatelessWidget {
               if (owner) ...[
                 SizedBox(height: 48, child: add),
                 const SizedBox(height: 8),
-                SizedBox(height: 44, child: printAll),
+                SizedBox(height: 44, child: printPending),
                 const SizedBox(height: 8),
                 SizedBox(height: 44, child: select),
                 const SizedBox(height: 8),
@@ -524,7 +589,7 @@ class _Header extends StatelessWidget {
                 children: [
                   if (search != null) SizedBox(width: 240, child: search),
                   identify,
-                  if (owner) ...[select, printAll, add],
+                  if (owner) ...[select, printPending, add],
                 ],
               ),
             ),
