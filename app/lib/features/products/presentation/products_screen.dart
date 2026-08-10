@@ -556,21 +556,58 @@ class _Header extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, c) {
         if (c.maxWidth < 640) {
-          // Phone: title, then full-width buttons ordered by importance.
+          // Phone: keep it uncluttered — "Agregar producto" + "Identificar QR"
+          // visible, the print actions tucked into a ⋮ overflow. The search
+          // field is rendered below by the screen.
+          if (!owner) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                titleBlock,
+                const SizedBox(height: 16),
+                SizedBox(height: 44, child: identify),
+              ],
+            );
+          }
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               titleBlock,
               const SizedBox(height: 16),
-              if (owner) ...[
-                SizedBox(height: 48, child: add),
-                const SizedBox(height: 8),
-                SizedBox(height: 44, child: printPending),
-                const SizedBox(height: 8),
-                SizedBox(height: 44, child: select),
-                const SizedBox(height: 8),
-              ],
-              SizedBox(height: 44, child: identify),
+              Row(
+                children: [
+                  Expanded(child: SizedBox(height: 48, child: add)),
+                  const SizedBox(width: 8),
+                  IconButton.outlined(
+                    onPressed: onIdentify,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    tooltip: 'Identificar QR',
+                  ),
+                  PopupMenuButton<String>(
+                    enabled: hasProducts,
+                    tooltip: 'Más acciones',
+                    icon: const Icon(Icons.more_vert),
+                    onSelected: (a) =>
+                        a == 'pending' ? onPrintPending() : onSelect(),
+                    itemBuilder: (_) => const [
+                      PopupMenuItem(
+                        value: 'pending',
+                        child: ListTile(
+                          leading: Icon(Icons.qr_code_2),
+                          title: Text('Imprimir pendientes'),
+                        ),
+                      ),
+                      PopupMenuItem(
+                        value: 'select',
+                        child: ListTile(
+                          leading: Icon(Icons.checklist),
+                          title: Text('Elegir e imprimir'),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ],
           );
         }
