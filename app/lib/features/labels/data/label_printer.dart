@@ -8,9 +8,9 @@ import 'package:printing/printing.dart';
 const _mm = PdfPageFormat.mm;
 
 /// The ONE QR-grid column count, so every label is the same size whether you
-/// print one, two, or the whole inventory. 12 keeps each QR ~10.4mm on A4 —
-/// noticeably smaller than the old 8-column (~17mm) yet still reliable to scan.
-const defaultLabelColumns = 12;
+/// print one, two, or the whole inventory. 11 keeps each QR ~12.3mm on A4 —
+/// bigger than 12 columns (~10.8mm) so phone cameras read it more reliably.
+const defaultLabelColumns = 11;
 
 /// How many label columns fit reasonably on an A4 sheet WITH text beside the QR.
 /// Beyond this the QR gets too small to scan comfortably.
