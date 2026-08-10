@@ -59,13 +59,17 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
   // One optional image for the whole model (applied to every size).
   Uint8List? _imageBytes;
 
-  Future<void> _pickImage() async {
-    final x = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (x == null) return;
-    final bytes = await x.readAsBytes();
-    final compressed = await compressImage(bytes);
-    if (!mounted) return;
-    setState(() => _imageBytes = compressed);
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final x = await ImagePicker().pickImage(source: source, imageQuality: 85);
+      if (x == null) return;
+      final bytes = await x.readAsBytes();
+      final compressed = await compressImage(bytes);
+      if (!mounted) return;
+      setState(() => _imageBytes = compressed);
+    } on Object {
+      if (mounted) _snack('No se pudo abrir la cámara o la galería.');
+    }
   }
 
   Widget _imageRow(TextStyle muted) {
@@ -97,12 +101,20 @@ class _BulkCreateSheetState extends State<BulkCreateSheet> {
                   style: TextStyle(fontWeight: FontWeight.w600)),
               Text('Se usa la misma para todas las tallas.', style: muted),
               const SizedBox(height: 6),
-              Row(
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                crossAxisAlignment: WrapCrossAlignment.center,
                 children: [
+                  FilledButton.tonalIcon(
+                    onPressed: () => _pickImage(ImageSource.camera),
+                    icon: const Icon(Icons.photo_camera_outlined, size: 18),
+                    label: const Text('Tomar foto'),
+                  ),
                   OutlinedButton.icon(
-                    onPressed: _pickImage,
-                    icon: const Icon(Icons.upload_outlined, size: 18),
-                    label: const Text('Subir imagen'),
+                    onPressed: () => _pickImage(ImageSource.gallery),
+                    icon: const Icon(Icons.photo_library_outlined, size: 18),
+                    label: const Text('Galería'),
                   ),
                   if (_imageBytes != null)
                     TextButton(

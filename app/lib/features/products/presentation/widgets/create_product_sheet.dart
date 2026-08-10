@@ -112,16 +112,23 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
   bool get _showsExistingImage =>
       widget.product?.hasImage == true && !_removeImage && _imageBytes == null;
 
-  Future<void> _pickFile() async {
-    final x = await ImagePicker().pickImage(source: ImageSource.gallery);
-    if (x == null) return;
-    final bytes = await x.readAsBytes();
-    final compressed = await compressImage(bytes);
-    if (!mounted) return;
-    setState(() {
-      _imageBytes = compressed;
-      _removeImage = false;
-    });
+  Future<void> _pickImage(ImageSource source) async {
+    try {
+      final x = await ImagePicker().pickImage(source: source, imageQuality: 85);
+      if (x == null) return;
+      final bytes = await x.readAsBytes();
+      final compressed = await compressImage(bytes);
+      if (!mounted) return;
+      setState(() {
+        _imageBytes = compressed;
+        _removeImage = false;
+      });
+    } on Object {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+            content: Text('No se pudo abrir la cámara o la galería.')));
+      }
+    }
   }
 
   void _clearImage() {
@@ -296,10 +303,22 @@ class _CreateProductSheetState extends State<CreateProductSheet> {
       children: [
         Center(child: _preview()),
         const SizedBox(height: 8),
-        OutlinedButton.icon(
-          onPressed: _pickFile,
-          icon: const Icon(Icons.upload_outlined),
-          label: const Text('Subir imagen'),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          alignment: WrapAlignment.center,
+          children: [
+            FilledButton.tonalIcon(
+              onPressed: () => _pickImage(ImageSource.camera),
+              icon: const Icon(Icons.photo_camera_outlined, size: 18),
+              label: const Text('Tomar foto'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _pickImage(ImageSource.gallery),
+              icon: const Icon(Icons.photo_library_outlined, size: 18),
+              label: const Text('Galería'),
+            ),
+          ],
         ),
         if (hasImage)
           TextButton.icon(
