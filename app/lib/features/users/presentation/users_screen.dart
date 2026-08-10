@@ -120,6 +120,7 @@ class UsersScreen extends ConsumerWidget {
     final result = await showModalBottomSheet<NewUser>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => const CreateUserSheet(),
     );
     if (result == null) return;
@@ -147,6 +148,7 @@ class UsersScreen extends ConsumerWidget {
     final result = await showModalBottomSheet<NewUser>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => CreateUserSheet(user: u),
     );
     if (result == null) return;

@@ -35,6 +35,7 @@ class AlertsBell extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => const _AlertsSheet(),
     );
   }

@@ -118,6 +118,7 @@ class ProductsScreen extends ConsumerWidget {
     final draft = await showModalBottomSheet<BulkDraft>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => BulkCreateSheet(showCost: isOwner),
     );
     if (draft == null) return;
@@ -183,6 +184,7 @@ class ProductsScreen extends ConsumerWidget {
     final input = await showModalBottomSheet<MovementInput>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => MovementSheet(isEntry: isEntry, sku: product.name),
     );
     if (input == null) return;
@@ -245,6 +247,7 @@ class ProductsScreen extends ConsumerWidget {
     final result = await showModalBottomSheet<NewProduct>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => CreateProductSheet(
         apiBaseUrl: ref.read(apiBaseUrlProvider),
         showCost: ref.read(currentUserProvider)?.isOwner ?? false,
@@ -330,6 +333,7 @@ class ProductsScreen extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => ProductDetailSheet(
         product: product,
         siblings: siblings.isEmpty ? [product] : siblings,
@@ -358,6 +362,7 @@ class ProductsScreen extends ConsumerWidget {
     final newSizes = await showModalBottomSheet<List<BulkSizeDraft>>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => AddSizesSheet(modelName: product.name),
     );
     if (newSizes == null || newSizes.isEmpty) return;
@@ -415,6 +420,7 @@ class ProductsScreen extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => LabelSheet(product: product),
     );
   }

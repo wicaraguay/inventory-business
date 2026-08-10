@@ -77,6 +77,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     final input = await showModalBottomSheet<CartInput>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => AddToCartSheet(
         product: product,
         maxQuantity: product.currentStock,

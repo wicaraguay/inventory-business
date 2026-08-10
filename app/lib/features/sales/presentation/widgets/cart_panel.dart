@@ -21,6 +21,7 @@ class CartPanel extends ConsumerWidget {
     final input = await showModalBottomSheet<CartInput>(
       context: context,
       isScrollControlled: true,
+      showDragHandle: true,
       builder: (_) => AddToCartSheet(
         product: line.product,
         maxQuantity: line.product.currentStock,
