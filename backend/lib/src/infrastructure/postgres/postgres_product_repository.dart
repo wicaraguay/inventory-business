@@ -56,6 +56,25 @@ class PostgresProductRepository implements ProductRepository {
   Future<List<Product>> createBulk(List<BulkProductInput> items) async {
     final created = <Product>[];
     await _db.runTx((tx) async {
+      // Reject sizes whose SKU already exists (e.g. the model shares a code
+      // prefix with one already loaded, or the default 34-40 range leaked in)
+      // with a clear message — instead of the unique constraint blowing up as
+      // an opaque 500 ("No se pudo registrar la carga").
+      final skus = [for (final i in items) i.sku.trim()];
+      final ph = [for (var i = 0; i < skus.length; i++) '@s$i'].join(', ');
+      final taken = await tx.execute(
+        Sql.named('SELECT sku FROM products WHERE sku IN ($ph)'),
+        parameters: {for (var i = 0; i < skus.length; i++) 's$i': skus[i]},
+      );
+      if (taken.isNotEmpty) {
+        final dup = [for (final r in taken) r[0] as String].join(', ');
+        throw DomainException(
+          'Estas tallas ya existen (mismo código): $dup. Sacalas de la carga '
+          '— si querés sumarlas a ese modelo, usá "Agregar tallas" desde el '
+          'detalle del producto.',
+        );
+      }
+
       // The first size uses the default model_id; the rest share it, so all
       // sizes of this load belong to the same model.
       String? sharedModelId;
