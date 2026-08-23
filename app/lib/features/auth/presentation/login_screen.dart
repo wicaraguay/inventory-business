@@ -5,6 +5,7 @@ import 'package:inventy_app/features/settings/presentation/settings_providers.da
 import 'package:inventy_app/shared/api/api_client.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/app_alert.dart';
+import 'package:inventy_app/shared/ui/atoms/password_field.dart';
 
 /// Login screen: shows the business logo + name, and asks for user + password.
 class LoginScreen extends ConsumerStatefulWidget {
@@ -106,14 +107,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                             : null,
                       ),
                       const SizedBox(height: 12),
-                      TextFormField(
+                      PasswordField(
                         controller: _pass,
-                        obscureText: true,
+                        label: 'Contraseña',
+                        prefixIcon: Icons.lock_outline,
                         onFieldSubmitted: (_) => _submit(),
-                        decoration: const InputDecoration(
-                          labelText: 'Contraseña',
-                          prefixIcon: Icon(Icons.lock_outline),
-                        ),
                         validator: (v) => (v == null || v.isEmpty)
                             ? 'Ingresá tu contraseña'
                             : null,

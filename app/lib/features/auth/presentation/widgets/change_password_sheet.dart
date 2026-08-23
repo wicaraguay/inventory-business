@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:inventy_app/features/auth/presentation/auth_providers.dart';
 import 'package:inventy_app/shared/ui/app_alert.dart';
+import 'package:inventy_app/shared/ui/atoms/password_field.dart';
 
 /// Bottom sheet: change your own password. Available to any logged-in user
 /// (owner or employee) from the sidebar account menu.
@@ -65,29 +66,24 @@ class _ChangePasswordSheetState extends ConsumerState<ChangePasswordSheet> {
             Text('Cambiar mi contraseña',
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
-            TextFormField(
+            PasswordField(
               controller: _current,
+              label: 'Contraseña actual',
               autofocus: true,
-              obscureText: true,
-              decoration:
-                  const InputDecoration(labelText: 'Contraseña actual'),
               validator: (v) =>
                   (v == null || v.isEmpty) ? 'Ingresá tu contraseña actual' : null,
             ),
             const SizedBox(height: 8),
-            TextFormField(
+            PasswordField(
               controller: _next,
-              obscureText: true,
-              decoration: const InputDecoration(labelText: 'Nueva contraseña'),
+              label: 'Nueva contraseña',
               validator: (v) =>
                   (v == null || v.length < 4) ? 'Mínimo 4 caracteres' : null,
             ),
             const SizedBox(height: 8),
-            TextFormField(
+            PasswordField(
               controller: _confirm,
-              obscureText: true,
-              decoration:
-                  const InputDecoration(labelText: 'Repetir nueva contraseña'),
+              label: 'Repetir nueva contraseña',
               validator: (v) =>
                   v != _next.text ? 'Las contraseñas no coinciden' : null,
             ),

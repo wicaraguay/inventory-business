@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:inventy_app/features/auth/domain/auth_user.dart';
+import 'package:inventy_app/shared/ui/atoms/password_field.dart';
 
 typedef NewUser = ({
   String username,
@@ -92,13 +93,9 @@ class _CreateUserSheetState extends State<CreateUserSheet> {
                   : null,
             ),
             const SizedBox(height: 8),
-            TextFormField(
+            PasswordField(
               controller: _password,
-              decoration: InputDecoration(
-                labelText: _isEdit
-                    ? 'Nueva contraseña (opcional)'
-                    : 'Contraseña',
-              ),
+              label: _isEdit ? 'Nueva contraseña (opcional)' : 'Contraseña',
               validator: (v) {
                 final value = v ?? '';
                 // Edit: empty means "keep current". Create: required, min 4.
