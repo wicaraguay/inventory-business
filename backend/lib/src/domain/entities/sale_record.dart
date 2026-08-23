@@ -9,6 +9,8 @@ class SaleRecord {
     required this.total,
     required this.createdAt,
     this.detail,
+    this.description,
+    this.sizeLabel,
     this.voidedAt,
     this.voidedBy,
   });
@@ -21,6 +23,12 @@ class SaleRecord {
   final double unitPrice;
   final double total;
   final DateTime createdAt;
+
+  /// Free-text description for quick sales.
+  final String? description;
+
+  /// Size label for quick sales.
+  final String? sizeLabel;
 
   /// When/who voided it (null = active).
   final DateTime? voidedAt;

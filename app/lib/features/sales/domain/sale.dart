@@ -9,6 +9,8 @@ class Sale {
     required this.total,
     required this.createdAt,
     this.detail,
+    this.description,
+    this.sizeLabel,
     this.voidedAt,
     this.voidedBy,
   });
@@ -17,6 +19,8 @@ class Sale {
         id: (json['id'] as String?) ?? '',
         productName: json['productName'] as String,
         detail: json['detail'] as String?,
+        description: json['description'] as String?,
+        sizeLabel: json['sizeLabel'] as String?,
         sku: json['sku'] as String,
         quantity: json['quantity'] as int,
         unitPrice: (json['unitPrice'] as num).toDouble(),
@@ -31,6 +35,12 @@ class Sale {
   final String id;
   final String productName;
   final String? detail;
+
+  /// Free-text description of a quick sale (null for inventory sales).
+  final String? description;
+
+  /// Size label of a quick sale (null for inventory sales).
+  final String? sizeLabel;
   final String sku;
   final int quantity;
   final double unitPrice;

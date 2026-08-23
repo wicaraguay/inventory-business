@@ -18,4 +18,10 @@ class ListSales {
     required int buckets,
   }) =>
       _repository.series(by: by, buckets: buckets);
+
+  Future<List<SalesBucket>> seriesRange({
+    required DateTime from,
+    required DateTime to,
+  }) =>
+      _repository.seriesRange(from: from, to: to);
 }

@@ -16,11 +16,38 @@ class DashboardScreen extends ConsumerStatefulWidget {
 
 class _DashboardScreenState extends ConsumerState<DashboardScreen> {
   String _by = 'day';
+  DateTime _from = DateTime.now().subtract(const Duration(days: 29));
+  DateTime _to = DateTime.now();
+
+  Future<void> _pickDate({required bool isFrom}) async {
+    final initial = isFrom ? _from : _to;
+    final first = DateTime(2020);
+    final last = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: initial.isAfter(last) ? last : initial,
+      firstDate: first,
+      lastDate: last,
+    );
+    if (picked == null) return;
+    setState(() {
+      if (isFrom) {
+        _from = picked;
+        if (_from.isAfter(_to)) _to = _from;
+      } else {
+        _to = picked;
+        if (_to.isBefore(_from)) _from = _to;
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
     final report = ref.watch(salesReportProvider);
     final series = ref.watch(salesSeriesProvider(_by));
+    final rangeData = ref.watch(
+      salesRangeProvider((from: _from, to: _to)),
+    );
     final summary = report.asData?.value.summary;
 
     return Padding(
@@ -131,9 +158,104 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 ),
               ),
             ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Text(
+                      'Ventas por período',
+                      style: Theme.of(context).textTheme.headlineMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    LayoutBuilder(
+                      builder: (context, constraints) {
+                        final pickers = [
+                          _DatePickerButton(
+                            label: 'Desde',
+                            date: _from,
+                            onTap: () => _pickDate(isFrom: true),
+                          ),
+                          const SizedBox(width: 12, height: 12),
+                          _DatePickerButton(
+                            label: 'Hasta',
+                            date: _to,
+                            onTap: () => _pickDate(isFrom: false),
+                          ),
+                        ];
+                        if (constraints.maxWidth < 400) {
+                          return Column(children: pickers);
+                        }
+                        return Row(
+                          children: [
+                            Expanded(child: pickers[0]),
+                            pickers[1],
+                            Expanded(child: pickers[2]),
+                          ],
+                        );
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    SizedBox(
+                      height: 240,
+                      child: rangeData.when(
+                        data: (buckets) =>
+                            SalesChart(buckets: buckets, by: 'day'),
+                        loading: () =>
+                            const Center(child: CircularProgressIndicator()),
+                        error: (e, _) => Center(child: Text('Error: $e')),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    rangeData.when(
+                      data: (buckets) {
+                        final total = buckets.fold<double>(
+                            0, (sum, b) => sum + b.total);
+                        return Text(
+                          'Total del período: ${money(total)}',
+                          style: Theme.of(context)
+                              .textTheme
+                              .titleMedium
+                              ?.copyWith(fontWeight: FontWeight.w700),
+                          textAlign: TextAlign.end,
+                        );
+                      },
+                      loading: () => const SizedBox.shrink(),
+                      error: (_, __) => const SizedBox.shrink(),
+                    ),
+                  ],
+                ),
+              ),
+            ),
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Presentational: button that shows a date and calls [onTap] when pressed.
+class _DatePickerButton extends StatelessWidget {
+  const _DatePickerButton({
+    required this.label,
+    required this.date,
+    required this.onTap,
+  });
+
+  final String label;
+  final DateTime date;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    String two(int n) => n.toString().padLeft(2, '0');
+    final formatted = '${two(date.day)}/${two(date.month)}/${date.year}';
+    return OutlinedButton.icon(
+      onPressed: onTap,
+      icon: const Icon(Icons.calendar_today, size: 16),
+      label: Text('$label: $formatted'),
     );
   }
 }

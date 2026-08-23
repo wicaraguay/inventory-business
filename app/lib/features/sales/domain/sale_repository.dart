@@ -1,7 +1,19 @@
 import 'package:inventy_app/features/sales/domain/sale.dart';
 
-/// One line to sell.
-typedef SaleLine = ({String productId, int quantity, double unitPrice});
+/// One line in a sale submission.
+///
+/// For inventory lines set [productId]; leave it null for quick-sale lines.
+/// Quick-sale lines require [description] and [total] (the exact amount charged).
+/// [sizeLabel] and [createdAt] are optional in both cases.
+typedef SaleLine = ({
+  String? productId,
+  int quantity,
+  double unitPrice,
+  double? total,
+  String? description,
+  String? sizeLabel,
+  DateTime? createdAt,
+});
 
 /// Raised when a sale can't be registered (e.g. insufficient stock).
 class SaleException implements Exception {
@@ -23,4 +35,7 @@ abstract interface class SaleRepository {
 
   /// Sales totals over time for the chart. [by] is 'day' or 'hour'.
   Future<List<SalesBucket>> series(String by);
+
+  /// Sales totals for a custom date range (day by day).
+  Future<List<SalesBucket>> seriesRange(DateTime from, DateTime to);
 }

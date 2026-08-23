@@ -37,13 +37,6 @@ const _actions = <_Action>[
     ownerOnly: false,
   ),
   (
-    icon: Icons.account_balance_wallet_outlined,
-    label: 'Caja',
-    path: '/cash',
-    color: AppColors.warning,
-    ownerOnly: false,
-  ),
-  (
     icon: Icons.receipt_long_outlined,
     label: 'Ventas',
     path: '/sales',

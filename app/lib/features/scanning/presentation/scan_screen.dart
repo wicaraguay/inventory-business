@@ -9,13 +9,18 @@ import 'package:inventy_app/features/sales/presentation/cart_providers.dart';
 import 'package:inventy_app/features/sales/presentation/sales_providers.dart';
 import 'package:inventy_app/features/sales/presentation/widgets/add_to_cart_sheet.dart';
 import 'package:inventy_app/features/sales/presentation/widgets/cart_panel.dart';
+import 'package:inventy_app/features/sales/presentation/widgets/quick_sale_sheet.dart';
 import 'package:inventy_app/features/scanning/presentation/scanning_providers.dart';
 import 'package:inventy_app/features/settings/presentation/settings_providers.dart';
 import 'package:inventy_app/shared/theme/app_colors.dart';
 import 'package:inventy_app/shared/ui/app_alert.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
-/// Point of sale: scan OR search (by name/code) products into a cart, then sell.
+/// Which input mode is active on the sales screen.
+enum _SaleMode { quick, qr }
+
+/// Point of sale: quick-sale form (default) or QR scanner — both feed the same
+/// cart. A single "Realizar venta" button covers all lines.
 class ScanScreen extends ConsumerStatefulWidget {
   const ScanScreen({super.key});
 
@@ -24,19 +29,35 @@ class ScanScreen extends ConsumerStatefulWidget {
 }
 
 class _ScanScreenState extends ConsumerState<ScanScreen> {
-  // We only use our own QR labels (they encode the product SKU).
-  final MobileScannerController _controller = MobileScannerController(
-    formats: const [BarcodeFormat.qrCode],
-  );
+  // QR scanner controller — lazy: only used when _mode == qr.
+  MobileScannerController? _controller;
+
+  // UI mode: quick-sale form or QR camera. This is pure UI state.
+  _SaleMode _mode = _SaleMode.quick;
+
+  // Whether the scanner is resolving a code (prevents double-scan).
   bool _busy = false;
+
+  void _setMode(_SaleMode mode) {
+    if (_mode == mode) return;
+    if (mode == _SaleMode.qr) {
+      _controller ??= MobileScannerController(
+        formats: const [BarcodeFormat.qrCode],
+      );
+    } else {
+      // Stop the camera when switching away — saves battery/resources.
+      _controller?.stop();
+    }
+    setState(() => _mode = mode);
+  }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _controller?.dispose();
     super.dispose();
   }
 
-  // --- Scanner path: resolve the exact code, then add ---
+  // --- Scanner path ---
   Future<void> _onDetect(BarcodeCapture capture) async {
     if (_busy) return;
     final code =
@@ -60,8 +81,7 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     }
   }
 
-  /// Shared: add a product to the cart — or, if it's already there (e.g. the
-  /// same size scanned twice), edit that line instead of duplicating it.
+  /// Add an inventory product to the cart — or edit the existing line.
   Future<void> _addProduct(Product product) async {
     if (product.currentStock <= 0) {
       await _alert(
@@ -95,20 +115,50 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     }
   }
 
+  /// Show the quick-sale sheet modally and add the result to the cart.
+  Future<void> _addQuick() async {
+    final input = await showModalBottomSheet<QuickSaleInput>(
+      context: context,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const QuickSaleSheet(),
+    );
+    if (input == null) return;
+    ref.read(cartProvider.notifier).addQuick(
+          quantity: input.quantity,
+          total: input.total,
+          description: input.description,
+          sizeLabel: input.sizeLabel,
+          date: input.date,
+        );
+  }
+
   Future<void> _checkout() async {
     final cart = ref.read(cartProvider);
     if (cart.isEmpty) return;
+
     final items = <SaleLine>[
       for (final l in cart)
-        (productId: l.product.id, quantity: l.quantity, unitPrice: l.unitPrice),
+        (
+          productId: l.isQuick ? null : l.product!.id,
+          quantity: l.quantity,
+          unitPrice: l.unitPrice,
+          total: l.explicitTotal,
+          description: l.description,
+          sizeLabel: l.sizeLabel,
+          createdAt: l.date,
+        ),
     ];
-    // Which lines leave the product at/below its threshold after this sale?
-    // Computed from cart data we already have — no extra server round-trip.
+
+    // Low-stock check (only inventory lines can deplete stock).
     final threshold = ref.read(settingsProvider).defaultThreshold;
     final nowLow = <String>[
       for (final l in cart)
-        if (l.product.currentStock - l.quantity <= threshold) l.product.name,
+        if (!l.isQuick &&
+            l.product!.currentStock - l.quantity <= threshold)
+          l.product!.name,
     ];
+
     try {
       await ref.read(saleRepositoryProvider).registerSale(items);
       ref.read(cartProvider.notifier).clear();
@@ -132,14 +182,16 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     await showAppAlert(context, message: message, kind: kind, title: title);
   }
 
+  // --- Scanner widget ---
   Widget _scanner() {
+    final ctrl = _controller!;
     return ClipRRect(
       borderRadius: BorderRadius.circular(16),
       child: Stack(
         fit: StackFit.expand,
         children: [
           MobileScanner(
-            controller: _controller,
+            controller: ctrl,
             onDetect: _onDetect,
             errorBuilder: (context, error) => _cameraUnavailable(),
           ),
@@ -167,9 +219,9 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                 style: TextStyle(fontWeight: FontWeight.w600)),
             const SizedBox(height: 4),
             Text(
-              'Buscá el producto por nombre o código arriba.',
-              style:
-                  TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
+              'Buscá el producto por nombre o código.',
+              style: TextStyle(
+                  color: AppColors.onSurface.withValues(alpha: 0.6)),
             ),
           ],
         ),
@@ -210,7 +262,8 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
             elevation: 4,
             borderRadius: BorderRadius.circular(12),
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 280, maxWidth: 460),
+              constraints:
+                  const BoxConstraints(maxHeight: 280, maxWidth: 460),
               child: ListView.builder(
                 padding: EdgeInsets.zero,
                 shrinkWrap: true,
@@ -232,6 +285,68 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
     );
   }
 
+  // --- Mode toggle bar ---
+  Widget _modeToggle() {
+    return SegmentedButton<_SaleMode>(
+      segments: const [
+        ButtonSegment(
+          value: _SaleMode.quick,
+          icon: Icon(Icons.shopping_bag_outlined),
+          label: Text('Venta rápida'),
+        ),
+        ButtonSegment(
+          value: _SaleMode.qr,
+          icon: Icon(Icons.qr_code_scanner),
+          label: Text('Escanear QR'),
+        ),
+      ],
+      selected: {_mode},
+      onSelectionChanged: (s) => _setMode(s.first),
+    );
+  }
+
+  // --- Quick-sale mode content ---
+  Widget _quickSaleContent(List<Product> products) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Search (inventory) field stays available in quick mode too.
+        _searchField(products),
+        const SizedBox(height: 12),
+        // Big prominent button to open the quick-sale form.
+        FilledButton.tonalIcon(
+          onPressed: _addQuick,
+          icon: const Icon(Icons.add),
+          label: const Text('Agregar venta rápida'),
+          style: FilledButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 16),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Usá el buscador para agregar productos del inventario, '
+          'o el botón de arriba para registrar una venta sin producto.',
+          style: TextStyle(
+            fontSize: 12,
+            color: AppColors.onSurface.withValues(alpha: 0.55),
+          ),
+          textAlign: TextAlign.center,
+        ),
+      ],
+    );
+  }
+
+  // --- QR-scan mode content ---
+  Widget _qrContent(List<Product> products) {
+    return Column(
+      children: [
+        _searchField(products),
+        const SizedBox(height: 12),
+        Expanded(child: _scanner()),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final products = ref.watch(productsProvider).asData?.value ?? const [];
@@ -244,26 +359,25 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
               style: Theme.of(context).textTheme.headlineLarge),
           const SizedBox(height: 4),
           Text(
-            'Escaneá o buscá productos, ajustá el precio y realizá la venta.',
-            style: TextStyle(color: AppColors.onSurface.withValues(alpha: 0.6)),
+            'Registrá ventas rápidas o escaneá QR del inventario.',
+            style: TextStyle(
+                color: AppColors.onSurface.withValues(alpha: 0.6)),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
+          _modeToggle(),
+          const SizedBox(height: 12),
           Expanded(
             child: LayoutBuilder(
               builder: (context, c) {
+                final leftPanel = _mode == _SaleMode.quick
+                    ? _quickSaleContent(products)
+                    : _qrContent(products);
+
                 if (c.maxWidth >= 900) {
                   return Row(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Expanded(
-                        child: Column(
-                          children: [
-                            _searchField(products),
-                            const SizedBox(height: 12),
-                            Expanded(child: _scanner()),
-                          ],
-                        ),
-                      ),
+                      Expanded(child: leftPanel),
                       const SizedBox(width: 16),
                       SizedBox(
                         width: 380,
@@ -272,11 +386,14 @@ class _ScanScreenState extends ConsumerState<ScanScreen> {
                     ],
                   );
                 }
+                // Narrow layout: left panel takes its natural height (quick mode)
+                // or a fixed 240 height (QR mode), then cart fills the rest.
                 return Column(
                   children: [
-                    _searchField(products),
-                    const SizedBox(height: 12),
-                    SizedBox(height: 240, child: _scanner()),
+                    if (_mode == _SaleMode.qr)
+                      SizedBox(height: 240, child: leftPanel)
+                    else
+                      leftPanel,
                     const SizedBox(height: 12),
                     Expanded(child: CartPanel(onCheckout: _checkout)),
                   ],

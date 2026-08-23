@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:dart_frog/dart_frog.dart';
 import 'package:inventy_backend/src/application/authorize_owner.dart';
 import 'package:inventy_backend/src/application/business_logo.dart';
-import 'package:inventy_backend/src/application/cash_close.dart';
 import 'package:inventy_backend/src/application/change_password.dart';
 import 'package:inventy_backend/src/application/create_product.dart';
 import 'package:inventy_backend/src/application/add_model_sizes.dart';
@@ -18,7 +17,6 @@ import 'package:inventy_backend/src/application/find_product_by_code.dart';
 import 'package:inventy_backend/src/application/get_model_sizes.dart';
 import 'package:inventy_backend/src/application/get_product_image.dart';
 import 'package:inventy_backend/src/application/get_settings.dart';
-import 'package:inventy_backend/src/application/get_today_sales.dart';
 import 'package:inventy_backend/src/application/list_movements.dart';
 import 'package:inventy_backend/src/application/list_products.dart';
 import 'package:inventy_backend/src/application/list_sales.dart';
@@ -38,7 +36,6 @@ import 'package:inventy_backend/src/domain/entities/user.dart';
 import 'package:inventy_backend/src/infrastructure/auth/jwt_service.dart';
 import 'package:inventy_backend/src/infrastructure/auth/password_hasher.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/database.dart';
-import 'package:inventy_backend/src/infrastructure/postgres/postgres_cash_repository.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/postgres_low_stock_repository.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/postgres_movement_history_repository.dart';
 import 'package:inventy_backend/src/infrastructure/postgres/postgres_product_image_repository.dart';
@@ -143,27 +140,6 @@ Handler middleware(Handler handler) {
         provider<Future<SnoozeLowStock>>(
           (_) async => SnoozeLowStock(
             PostgresLowStockRepository(await Database.connection()),
-          ),
-        ),
-      )
-      .use(
-        provider<Future<SaveCashClose>>(
-          (_) async => SaveCashClose(
-            PostgresCashRepository(await Database.connection()),
-          ),
-        ),
-      )
-      .use(
-        provider<Future<ListCashCloses>>(
-          (_) async => ListCashCloses(
-            PostgresCashRepository(await Database.connection()),
-          ),
-        ),
-      )
-      .use(
-        provider<Future<GetTodaySales>>(
-          (_) async => GetTodaySales(
-            PostgresSalesRepository(await Database.connection()),
           ),
         ),
       )
@@ -344,8 +320,6 @@ bool _isOwnerOnly(RequestContext context) {
   if (p.startsWith('/sales/series')) return true;
   // Anular una venta: solo el dueño (la registración sí la hace el empleado).
   if (m == HttpMethod.delete && p.startsWith('/sales/')) return true;
-  // Nota: /cash (arqueo) NO es solo-dueño — el empleado puede cerrar la caja
-  // cuando cierra el local; cada cierre queda registrado con su nombre.
   // Deleting a product outright is destructive: owner only (an inventory helper
   // can create/edit, but not delete). NOT the image sub-route (that's just its
   // photo, part of managing inventory).

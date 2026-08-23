@@ -34,6 +34,8 @@ Future<Response> _list(RequestContext context) async {
               'createdAt': s.createdAt.toIso8601String(),
               'voidedAt': s.voidedAt?.toIso8601String(),
               'voidedBy': s.voidedBy,
+              'description': s.description,
+              'sizeLabel': s.sizeLabel,
             },
           )
           .toList(),
@@ -55,7 +57,9 @@ Future<Response> _list(RequestContext context) async {
   );
 }
 
-/// Body: {"items": [{"productId": "<uuid>", "quantity": 1, "unitPrice": 1999.99}, ...]}
+/// Body: {"items": [{"productId": "<uuid>|null", "quantity": 1, "unitPrice": 1999.99,
+///                   "description": "...", "sizeLabel": "38", "createdAt": "ISO8601"}, ...]}
+/// Quick sale: omit productId or send null/empty; description is then required.
 Future<Response> _register(RequestContext context) async {
   final body = await context.request.json() as Map<String, dynamic>;
   final itemsJson = body['items'] as List?;
@@ -68,10 +72,15 @@ Future<Response> _register(RequestContext context) async {
   }
 
   final items = itemsJson.cast<Map<String, dynamic>>().map((m) {
+    final createdAtRaw = m['createdAt'] as String?;
     return SaleItem(
-      productId: m['productId'] as String? ?? '',
+      productId: m['productId'] as String?,
       quantity: m['quantity'] as int? ?? 0,
       unitPrice: (m['unitPrice'] as num?)?.toDouble() ?? 0,
+      total: (m['total'] as num?)?.toDouble(),
+      description: m['description'] as String?,
+      sizeLabel: m['sizeLabel'] as String?,
+      createdAt: createdAtRaw != null ? DateTime.parse(createdAtRaw) : null,
     );
   }).toList();
 

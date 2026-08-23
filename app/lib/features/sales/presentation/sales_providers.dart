@@ -17,3 +17,9 @@ final salesSeriesProvider =
     FutureProvider.family<List<SalesBucket>, String>((ref, by) {
   return ref.watch(saleRepositoryProvider).series(by);
 });
+
+/// Sales time-series for a custom date range.
+final salesRangeProvider = FutureProvider.family<
+    List<SalesBucket>, ({DateTime from, DateTime to})>((ref, r) {
+  return ref.watch(saleRepositoryProvider).seriesRange(r.from, r.to);
+});
