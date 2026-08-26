@@ -43,12 +43,18 @@ class HttpSaleRepository implements SaleRepository {
       map['sizeLabel'] = line.sizeLabel;
     }
     if (line.createdAt != null) {
-      // Anchor to LOCAL noon before serializing: showDatePicker yields local
-      // midnight, and a naive local->UTC conversion can shift the calendar day
-      // in reports (created_at is timestamptz). Noon never crosses the day
-      // boundary in any real timezone, so the sale lands on the day she picked.
       final d = line.createdAt!;
-      map['createdAt'] = DateTime(d.year, d.month, d.day, 12).toIso8601String();
+      final now = DateTime.now();
+      final isToday =
+          d.year == now.year && d.month == now.month && d.day == now.day;
+      if (!isToday) {
+        // Back-dated: anchor to LOCAL noon and convert to a real UTC instant
+        // (note the .toUtc()). This lands the sale on the chosen calendar day
+        // in the business timezone and displays around midday — not a
+        // confusing hour. Today is left out so the backend stamps now().
+        map['createdAt'] =
+            DateTime(d.year, d.month, d.day, 12).toUtc().toIso8601String();
+      }
     }
     return map;
   }
