@@ -4,6 +4,7 @@ import 'package:dart_frog/dart_frog.dart';
 import 'package:inventy_backend/src/application/list_sales.dart';
 import 'package:inventy_backend/src/application/register_sale.dart';
 import 'package:inventy_backend/src/domain/entities/sale_item.dart';
+import 'package:inventy_backend/src/domain/entities/sale_record.dart';
 import 'package:inventy_backend/src/domain/exceptions.dart';
 
 /// /sales — GET lists history + summary; POST registers a sale.
@@ -17,7 +18,41 @@ Future<Response> onRequest(RequestContext context) async {
 
 Future<Response> _list(RequestContext context) async {
   final useCase = await context.read<Future<ListSales>>();
-  final records = await useCase.records();
+
+  // Optional date filter: ?from=YYYY-MM-DD&to=YYYY-MM-DD → records in that
+  // local-date range (so the owner can see any past period). Without it, the
+  // list stays as the most-recent sales.
+  final q = context.request.uri.queryParameters;
+  final fromRaw = q['from'];
+  final toRaw = q['to'];
+
+  final List<SaleRecord> records;
+  if (fromRaw != null && toRaw != null) {
+    final from = DateTime.tryParse(fromRaw);
+    final to = DateTime.tryParse(toRaw);
+    if (from == null || to == null) {
+      return Response.json(
+        statusCode: HttpStatus.badRequest,
+        body: {'error': 'Fechas inválidas (usá YYYY-MM-DD)'},
+      );
+    }
+    if (to.isBefore(from)) {
+      return Response.json(
+        statusCode: HttpStatus.badRequest,
+        body: {'error': 'La fecha "hasta" no puede ser anterior a "desde"'},
+      );
+    }
+    if (to.difference(from).inDays > 366) {
+      return Response.json(
+        statusCode: HttpStatus.badRequest,
+        body: {'error': 'El rango máximo es de 366 días'},
+      );
+    }
+    records = await useCase.recordsInRange(from: from, to: to);
+  } else {
+    records = await useCase.records();
+  }
+
   final summary = await useCase.summary();
   return Response.json(
     body: {

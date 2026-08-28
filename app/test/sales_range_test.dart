@@ -51,6 +51,9 @@ class _FakeSaleRepository implements SaleRepository {
   @override
   Future<List<SalesBucket>> seriesRange(DateTime from, DateTime to) async =>
       _rangeBuckets;
+
+  @override
+  Future<List<Sale>> recordsInRange(DateTime from, DateTime to) async => [];
 }
 
 // ---------------------------------------------------------------------------

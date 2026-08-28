@@ -38,4 +38,7 @@ abstract interface class SaleRepository {
 
   /// Sales totals for a custom date range (day by day).
   Future<List<SalesBucket>> seriesRange(DateTime from, DateTime to);
+
+  /// All sales (with void info) for a given date range.
+  Future<List<Sale>> recordsInRange(DateTime from, DateTime to);
 }

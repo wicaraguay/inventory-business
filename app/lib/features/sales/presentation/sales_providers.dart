@@ -23,3 +23,9 @@ final salesRangeProvider = FutureProvider.family<
     List<SalesBucket>, ({DateTime from, DateTime to})>((ref, r) {
   return ref.watch(saleRepositoryProvider).seriesRange(r.from, r.to);
 });
+
+/// All sale records (with void info) for a given date range.
+final salesInRangeProvider = FutureProvider.family<
+    List<Sale>, ({DateTime from, DateTime to})>((ref, r) {
+  return ref.watch(saleRepositoryProvider).recordsInRange(r.from, r.to);
+});

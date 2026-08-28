@@ -11,6 +11,12 @@ class ListSales {
 
   Future<List<SaleRecord>> records() => _repository.recent();
 
+  Future<List<SaleRecord>> recordsInRange({
+    required DateTime from,
+    required DateTime to,
+  }) =>
+      _repository.listByRange(from: from, to: to);
+
   Future<SalesSummary> summary() => _repository.summary();
 
   Future<List<SalesBucket>> series({

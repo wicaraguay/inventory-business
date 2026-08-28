@@ -10,6 +10,16 @@ abstract interface class SalesRepository {
 
   Future<List<SaleRecord>> recent({int limit = 100});
 
+  /// Sales whose LOCAL date falls in the inclusive range [from]..[to]
+  /// (most recent first, voided included). Lets the UI show any past period,
+  /// not just the latest ones. The date comparison uses the DB session
+  /// timezone so "13 al 14" means those days in the business's local time.
+  Future<List<SaleRecord>> listByRange({
+    required DateTime from,
+    required DateTime to,
+    int limit = 1000,
+  });
+
   /// Voids a sale (soft): marks it, restores stock, keeps the record.
   Future<void> voidSale(String id, String? by);
 

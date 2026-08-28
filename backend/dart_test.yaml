@@ -1,0 +1,9 @@
+# Integration tests hit ONE shared Postgres. Running test files in parallel
+# isolates lets them read each other's rows (wrong counts/sums), so we force
+# serial execution. Unit tests are fast, so the cost is negligible.
+concurrency: 1
+
+# Declare the `integration` tag (silences the "tag not specified" warning and
+# lets you run just those with: dart test -t integration).
+tags:
+  integration:

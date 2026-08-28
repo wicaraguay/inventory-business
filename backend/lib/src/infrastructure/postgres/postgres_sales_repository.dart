@@ -115,6 +115,62 @@ class PostgresSalesRepository implements SalesRepository {
   }
 
   @override
+  Future<List<SaleRecord>> listByRange({
+    required DateTime from,
+    required DateTime to,
+    int limit = 1000,
+  }) async {
+    // Compare against DATE LITERALS ('YYYY-MM-DD'), not timestamptz params, so
+    // the range is unambiguous. `created_at::date` uses the DB session timezone
+    // (America/Guayaquil), so the window matches the business's local days.
+    String ymd(DateTime d) => '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+
+    final result = await _db.execute(
+      Sql.named('''
+        SELECT s.id,
+               COALESCE(p.name, s.description, 'Venta rápida') AS product_name,
+               COALESCE(p.detail, s.size_label) AS detail,
+               COALESCE(p.sku, '—') AS sku,
+               s.quantity,
+               s.unit_price::float8,
+               s.total::float8,
+               s.created_at,
+               s.voided_at,
+               s.voided_by,
+               s.description,
+               s.size_label
+        FROM sales s
+        LEFT JOIN products p ON p.id = s.product_id
+        WHERE s.created_at::date BETWEEN @from::date AND @to::date
+        ORDER BY s.created_at DESC
+        LIMIT @limit
+      '''),
+      parameters: {'from': ymd(from), 'to': ymd(to), 'limit': limit},
+    );
+
+    return result
+        .map(
+          (row) => SaleRecord(
+            id: row[0].toString(),
+            productName: row[1]! as String,
+            detail: row[2] as String?,
+            sku: row[3]! as String,
+            quantity: row[4]! as int,
+            unitPrice: row[5]! as double,
+            total: row[6]! as double,
+            createdAt: row[7]! as DateTime,
+            voidedAt: row[8] as DateTime?,
+            voidedBy: row[9] as String?,
+            description: row[10] as String?,
+            sizeLabel: row[11] as String?,
+          ),
+        )
+        .toList();
+  }
+
+  @override
   Future<void> voidSale(String id, String? by) async {
     await _db.runTx((tx) async {
       final res = await tx.execute(
