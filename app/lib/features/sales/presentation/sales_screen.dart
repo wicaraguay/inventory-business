@@ -26,24 +26,22 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   late DateTime _from = DateTime.now().subtract(const Duration(days: 29));
   late DateTime _to = DateTime.now();
 
-  Future<void> _pickDate({required bool isFrom}) async {
-    final initial = isFrom ? _from : _to;
-    final last = DateTime.now();
-    final picked = await showDatePicker(
+  /// One compact control: pick BOTH ends of the range in a single calendar.
+  Future<void> _pickRange() async {
+    final now = DateTime.now();
+    final end = _to.isAfter(now) ? now : _to;
+    final picked = await showDateRangePicker(
       context: context,
-      initialDate: initial.isAfter(last) ? last : initial,
+      initialDateRange: DateTimeRange(start: _from, end: end),
       firstDate: DateTime(2020),
-      lastDate: last,
+      lastDate: now,
+      helpText: 'Elegí el período',
+      saveText: 'Listo',
     );
     if (picked == null) return;
     setState(() {
-      if (isFrom) {
-        _from = picked;
-        if (_from.isAfter(_to)) _to = _from;
-      } else {
-        _to = picked;
-        if (_to.isBefore(_from)) _from = _to;
-      }
+      _from = picked.start;
+      _to = picked.end;
     });
   }
 
@@ -160,33 +158,14 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
 
           const SizedBox(height: 16),
 
-          // ── Date-range filter ────────────────────────────────────────────
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final pickers = [
-                _DatePickerButton(
-                  label: 'Desde',
-                  date: _from,
-                  onTap: () => _pickDate(isFrom: true),
-                ),
-                const SizedBox(width: 12, height: 12),
-                _DatePickerButton(
-                  label: 'Hasta',
-                  date: _to,
-                  onTap: () => _pickDate(isFrom: false),
-                ),
-              ];
-              if (constraints.maxWidth < 400) {
-                return Column(children: pickers);
-              }
-              return Row(
-                children: [
-                  Expanded(child: pickers[0]),
-                  pickers[1],
-                  Expanded(child: pickers[2]),
-                ],
-              );
-            },
+          // ── Date-range filter (one compact chip) ─────────────────────────
+          Align(
+            alignment: Alignment.centerLeft,
+            child: _DateRangeChip(
+              from: _from,
+              to: _to,
+              onTap: _pickRange,
+            ),
           ),
 
           const SizedBox(height: 12),
@@ -250,28 +229,31 @@ class _PeriodSummary extends StatelessWidget {
   }
 }
 
-// ── Date picker button ─────────────────────────────────────────────────────
+// ── Date range chip ────────────────────────────────────────────────────────
 
-/// Presentational: button that shows a date label and calls [onTap] when pressed.
-class _DatePickerButton extends StatelessWidget {
-  const _DatePickerButton({
-    required this.label,
-    required this.date,
+/// Presentational: one compact pill showing the selected range (e.g.
+/// "30/07 – 28/08"); tapping opens the range picker via [onTap].
+class _DateRangeChip extends StatelessWidget {
+  const _DateRangeChip({
+    required this.from,
+    required this.to,
     required this.onTap,
   });
 
-  final String label;
-  final DateTime date;
+  final DateTime from;
+  final DateTime to;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    String two(int n) => n.toString().padLeft(2, '0');
-    final formatted = '${two(date.day)}/${two(date.month)}/${date.year}';
-    return OutlinedButton.icon(
+    String d(DateTime x) =>
+        '${x.day.toString().padLeft(2, '0')}/${x.month.toString().padLeft(2, '0')}';
+    return ActionChip(
+      avatar: const Icon(Icons.date_range, size: 18),
+      label: Text('${d(from)} – ${d(to)}'),
       onPressed: onTap,
-      icon: const Icon(Icons.calendar_today, size: 16),
-      label: Text('$label: $formatted'),
+      tooltip: 'Cambiar período',
+      shape: const StadiumBorder(),
     );
   }
 }

@@ -146,12 +146,13 @@ void main() {
       expect(find.text('TOTAL GENERAL'), findsOneWidget);
     });
 
-    testWidgets('muestra los botones de filtro Desde y Hasta',
+    testWidgets('muestra un solo chip compacto de rango de fechas',
         (tester) async {
       await _pumpSalesScreen(tester, records: _fakeSales);
 
-      expect(find.textContaining('Desde:'), findsOneWidget);
-      expect(find.textContaining('Hasta:'), findsOneWidget);
+      // Un único control (chip) con el ícono de rango, en vez de dos botones.
+      expect(find.byType(ActionChip), findsOneWidget);
+      expect(find.byIcon(Icons.date_range), findsOneWidget);
     });
 
     testWidgets('muestra empty state cuando el rango no tiene ventas',
