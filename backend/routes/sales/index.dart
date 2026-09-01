@@ -26,7 +26,13 @@ Future<Response> _list(RequestContext context) async {
   final fromRaw = q['from'];
   final toRaw = q['to'];
 
+  // Pagination (used with the date range): ?limit=20&offset=40. Clamped so a
+  // bad value can't ask for everything.
+  final limit = (int.tryParse(q['limit'] ?? '') ?? 20).clamp(1, 100);
+  final offset = (int.tryParse(q['offset'] ?? '') ?? 0).clamp(0, 1 << 30);
+
   final List<SaleRecord> records;
+  int? salesTotal; // total in the range (for page counts); null when unfiltered
   if (fromRaw != null && toRaw != null) {
     final from = DateTime.tryParse(fromRaw);
     final to = DateTime.tryParse(toRaw);
@@ -48,7 +54,13 @@ Future<Response> _list(RequestContext context) async {
         body: {'error': 'El rango máximo es de 366 días'},
       );
     }
-    records = await useCase.recordsInRange(from: from, to: to);
+    records = await useCase.recordsInRange(
+      from: from,
+      to: to,
+      limit: limit,
+      offset: offset,
+    );
+    salesTotal = await useCase.countInRange(from: from, to: to);
   } else {
     records = await useCase.records();
   }
@@ -74,6 +86,8 @@ Future<Response> _list(RequestContext context) async {
             },
           )
           .toList(),
+      // Total rows in the filtered range (for pagination); null when unfiltered.
+      'salesTotal': salesTotal,
       'summary': {
         'count': summary.count,
         'totalAll': summary.totalAll,

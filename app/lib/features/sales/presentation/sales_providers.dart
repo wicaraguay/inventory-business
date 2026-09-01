@@ -29,3 +29,19 @@ final salesInRangeProvider = FutureProvider.family<
     List<Sale>, ({DateTime from, DateTime to})>((ref, r) {
   return ref.watch(saleRepositoryProvider).recordsInRange(r.from, r.to);
 });
+
+/// Paginated sales for a date range.
+///
+/// The family arg carries from/to dates, page size (limit) and page start
+/// (offset).  The result is a record with the page [records] and the [total]
+/// count of sales in the range (for computing page count).
+final salesPageProvider = FutureProvider.family<
+    ({List<Sale> records, int total}),
+    ({DateTime from, DateTime to, int limit, int offset})>((ref, a) {
+  return ref.watch(saleRepositoryProvider).salesPage(
+        from: a.from,
+        to: a.to,
+        limit: a.limit,
+        offset: a.offset,
+      );
+});

@@ -13,7 +13,25 @@ import 'package:inventy_app/shared/ui/app_alert.dart';
 import 'package:inventy_app/shared/ui/molecules/metric_card.dart';
 import 'package:inventy_app/shared/ui/molecules/metric_card_row.dart';
 
-/// Container: the Ventas section — global totals + date-range sales history.
+const _pageSize = 20;
+
+const _monthNames = [
+  'Enero',
+  'Febrero',
+  'Marzo',
+  'Abril',
+  'Mayo',
+  'Junio',
+  'Julio',
+  'Agosto',
+  'Septiembre',
+  'Octubre',
+  'Noviembre',
+  'Diciembre',
+];
+
+/// Container: the Ventas section — global totals + month navigator + paginated
+/// sales history.
 class SalesScreen extends ConsumerStatefulWidget {
   const SalesScreen({super.key});
 
@@ -22,26 +40,37 @@ class SalesScreen extends ConsumerStatefulWidget {
 }
 
 class _SalesScreenState extends ConsumerState<SalesScreen> {
-  // Default: last 30 days (from = today - 29, to = today).
-  late DateTime _from = DateTime.now().subtract(const Duration(days: 29));
-  late DateTime _to = DateTime.now();
+  // Local UI state: selected month (first day) and current page index.
+  late DateTime _month = _firstDayOfCurrentMonth();
+  int _page = 0;
 
-  /// One compact control: pick BOTH ends of the range in a single calendar.
-  Future<void> _pickRange() async {
+  static DateTime _firstDayOfCurrentMonth() {
     final now = DateTime.now();
-    final end = _to.isAfter(now) ? now : _to;
-    final picked = await showDateRangePicker(
-      context: context,
-      initialDateRange: DateTimeRange(start: _from, end: end),
-      firstDate: DateTime(2020),
-      lastDate: now,
-      helpText: 'Elegí el período',
-      saveText: 'Listo',
-    );
-    if (picked == null) return;
+    return DateTime(now.year, now.month, 1);
+  }
+
+  bool get _isCurrentMonth {
+    final now = DateTime.now();
+    return _month.year == now.year && _month.month == now.month;
+  }
+
+  /// First day of the selected month.
+  DateTime get _from => _month;
+
+  /// Last day of the selected month (day 0 of the following month).
+  DateTime get _to => DateTime(_month.year, _month.month + 1, 0);
+
+  void _prevMonth() {
     setState(() {
-      _from = picked.start;
-      _to = picked.end;
+      _month = DateTime(_month.year, _month.month - 1, 1);
+      _page = 0;
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _month = DateTime(_month.year, _month.month + 1, 1);
+      _page = 0;
     });
   }
 
@@ -72,7 +101,7 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
     try {
       await ref.read(saleRepositoryProvider).voidSale(sale.id);
       ref.invalidate(salesReportProvider);
-      ref.invalidate(salesInRangeProvider);
+      ref.invalidate(salesPageProvider);
       ref.invalidate(productsProvider); // stock changed
       ref.invalidate(lowStockProvider);
       if (context.mounted) {
@@ -92,42 +121,54 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   @override
   Widget build(BuildContext context) {
     final report = ref.watch(salesReportProvider);
-    final salesAsync =
-        ref.watch(salesInRangeProvider((from: _from, to: _to)));
+    final salesAsync = ref.watch(salesPageProvider((
+      from: _from,
+      to: _to,
+      limit: _pageSize,
+      offset: _page * _pageSize,
+    )));
     final isOwner = ref.watch(currentUserProvider)?.isOwner ?? false;
 
     return Padding(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           // ── Header row ──────────────────────────────────────────────────
           Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Ventas',
-                        style: Theme.of(context).textTheme.headlineLarge),
-                    const SizedBox(height: 4),
+                        style: Theme.of(context).textTheme.headlineMedium,
+                        overflow: TextOverflow.ellipsis),
+                    const SizedBox(height: 2),
                     Text(
                       'Monitoreo de tus ventas',
                       style: TextStyle(
-                          color: AppColors.onSurface.withValues(alpha: 0.6)),
+                          color: AppColors.onSurface.withValues(alpha: 0.6),
+                          fontSize: 13),
                     ),
                   ],
                 ),
               ),
+              const SizedBox(width: 12),
               FilledButton.icon(
                 onPressed: () => context.go('/scan'),
-                icon: const Icon(Icons.point_of_sale),
+                icon: const Icon(Icons.point_of_sale, size: 18),
                 label: const Text('Nueva venta'),
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 20),
 
           // ── Global metric cards (always from salesReportProvider) ────────
           report.when(
@@ -137,6 +178,12 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                 value: money(r.summary.totalToday),
                 icon: Icons.point_of_sale,
                 accent: AppColors.success,
+              ),
+              MetricCard(
+                label: 'Vendido este mes',
+                value: money(r.summary.totalMonth),
+                icon: Icons.calendar_month_outlined,
+                accent: AppColors.primary,
               ),
               MetricCard(
                 label: 'Total general',
@@ -156,30 +203,35 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
             error: (e, _) => Text('Error al cargar métricas: $e'),
           ),
 
-          const SizedBox(height: 16),
-
-          // ── Date-range filter (one compact chip) ─────────────────────────
-          Align(
-            alignment: Alignment.centerLeft,
-            child: _DateRangeChip(
-              from: _from,
-              to: _to,
-              onTap: _pickRange,
-            ),
-          ),
-
           const SizedBox(height: 12),
 
-          // ── Sales table for the selected range ───────────────────────────
+          // ── Month navigator ──────────────────────────────────────────────
+          _MonthNavigator(
+            month: _month,
+            isCurrentMonth: _isCurrentMonth,
+            onPrev: _prevMonth,
+            onNext: _isCurrentMonth ? null : _nextMonth,
+          ),
+
+          const SizedBox(height: 10),
+
+          // ── Sales table for the selected month ───────────────────────────
           Expanded(
             child: salesAsync.when(
-              data: (sales) {
-                if (sales.isEmpty) return const _Empty();
+              data: (page) {
+                final sales = page.records;
+                final total = page.total;
+                final totalPages = (total / _pageSize).ceil().clamp(1, 999999);
+
+                if (sales.isEmpty && _page == 0) {
+                  return const _Empty();
+                }
+
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Period summary line
-                    _PeriodSummary(sales: sales),
+                    _PeriodSummary(total: total),
                     const SizedBox(height: 8),
                     Expanded(
                       child: SalesTable(
@@ -187,6 +239,18 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
                         canVoid: isOwner,
                         onVoid: _confirmVoid,
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    // Pagination controls
+                    _PaginationBar(
+                      page: _page,
+                      totalPages: totalPages,
+                      onPrev: _page == 0
+                          ? null
+                          : () => setState(() => _page--),
+                      onNext: _page + 1 >= totalPages
+                          ? null
+                          : () => setState(() => _page++),
                     ),
                   ],
                 );
@@ -203,57 +267,154 @@ class _SalesScreenState extends ConsumerState<SalesScreen> {
   }
 }
 
-// ── Period summary ─────────────────────────────────────────────────────────
+// ── Month navigator ────────────────────────────────────────────────────────
 
-/// Presentational: shows the count and total amount for the current period.
-class _PeriodSummary extends StatelessWidget {
-  const _PeriodSummary({required this.sales});
+/// Presentational: ‹ Agosto 2026 › with the › disabled when in current month.
+///
+/// Uses a fixed-width [SizedBox] for each icon button so the label stays
+/// perfectly centred in any screen width without risk of overflow.
+class _MonthNavigator extends StatelessWidget {
+  const _MonthNavigator({
+    required this.month,
+    required this.isCurrentMonth,
+    required this.onPrev,
+    this.onNext,
+  });
 
-  final List<Sale> sales;
+  final DateTime month;
+  final bool isCurrentMonth;
+  final VoidCallback onPrev;
+
+  /// Null to disable the forward arrow.
+  final VoidCallback? onNext;
 
   @override
   Widget build(BuildContext context) {
-    final active = sales.where((s) => !s.isVoided).toList();
-    final total = active.fold<double>(0, (sum, s) => sum + s.total);
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Text(
-          '${active.length} venta${active.length == 1 ? '' : 's'} · ${money(total)}',
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+    final label = '${_monthNames[month.month - 1]} ${month.year}';
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: AppColors.inputBorder.withValues(alpha: 0.5),
         ),
-      ],
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          SizedBox(
+            width: 44,
+            child: IconButton(
+              key: const Key('month-prev'),
+              icon: const Icon(Icons.chevron_left),
+              tooltip: 'Mes anterior',
+              onPressed: onPrev,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+          ),
+          SizedBox(
+            width: 44,
+            child: IconButton(
+              key: const Key('month-next'),
+              icon: Icon(
+                Icons.chevron_right,
+                color: isCurrentMonth
+                    ? AppColors.onSurface.withValues(alpha: 0.3)
+                    : null,
+              ),
+              tooltip: isCurrentMonth ? null : 'Mes siguiente',
+              onPressed: onNext,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
 
-// ── Date range chip ────────────────────────────────────────────────────────
+// ── Period summary ─────────────────────────────────────────────────────────
 
-/// Presentational: one compact pill showing the selected range (e.g.
-/// "30/07 – 28/08"); tapping opens the range picker via [onTap].
-class _DateRangeChip extends StatelessWidget {
-  const _DateRangeChip({
-    required this.from,
-    required this.to,
-    required this.onTap,
-  });
+/// Presentational: shows the total count of sales in the month from the
+/// backend (includes all pages).
+class _PeriodSummary extends StatelessWidget {
+  const _PeriodSummary({required this.total});
 
-  final DateTime from;
-  final DateTime to;
-  final VoidCallback onTap;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
-    String d(DateTime x) =>
-        '${x.day.toString().padLeft(2, '0')}/${x.month.toString().padLeft(2, '0')}';
-    return ActionChip(
-      avatar: const Icon(Icons.date_range, size: 18),
-      label: Text('${d(from)} – ${d(to)}'),
-      onPressed: onTap,
-      tooltip: 'Cambiar período',
-      shape: const StadiumBorder(),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            '$total venta${total == 1 ? '' : 's'} en el mes',
+            style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.onSurface.withValues(alpha: 0.75),
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Pagination bar ─────────────────────────────────────────────────────────
+
+/// Presentational: Anterior / Página X de Y / Siguiente.
+///
+/// Uses [Expanded] for the page-indicator so the two buttons stay pinned to
+/// the edges and never overflow on narrow screens.
+class _PaginationBar extends StatelessWidget {
+  const _PaginationBar({
+    required this.page,
+    required this.totalPages,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  final int page;
+  final int totalPages;
+  final VoidCallback? onPrev;
+  final VoidCallback? onNext;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        TextButton.icon(
+          key: const Key('page-prev'),
+          onPressed: onPrev,
+          icon: const Icon(Icons.chevron_left, size: 18),
+          label: const Text('Anterior'),
+        ),
+        Expanded(
+          child: Text(
+            'Página ${page + 1} de $totalPages',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+        ),
+        TextButton.icon(
+          key: const Key('page-next'),
+          onPressed: onNext,
+          icon: const Icon(Icons.chevron_right, size: 18),
+          label: const Text('Siguiente'),
+          iconAlignment: IconAlignment.end,
+        ),
+      ],
     );
   }
 }
@@ -272,11 +433,11 @@ class _Empty extends StatelessWidget {
           Icon(Icons.receipt_long_outlined,
               size: 48, color: AppColors.inputBorder),
           const SizedBox(height: 12),
-          Text('No hay ventas en este período',
+          Text('No hay ventas en este mes',
               style: Theme.of(context).textTheme.headlineMedium),
           const SizedBox(height: 4),
           Text(
-            'Probá con otro rango de fechas.',
+            'Probá con el mes anterior.',
             style: TextStyle(
                 color: AppColors.onSurface.withValues(alpha: 0.6)),
           ),

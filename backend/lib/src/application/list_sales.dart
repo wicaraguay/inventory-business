@@ -14,8 +14,21 @@ class ListSales {
   Future<List<SaleRecord>> recordsInRange({
     required DateTime from,
     required DateTime to,
+    int limit = 20,
+    int offset = 0,
   }) =>
-      _repository.listByRange(from: from, to: to);
+      _repository.listByRange(
+        from: from,
+        to: to,
+        limit: limit,
+        offset: offset,
+      );
+
+  Future<int> countInRange({
+    required DateTime from,
+    required DateTime to,
+  }) =>
+      _repository.countByRange(from: from, to: to);
 
   Future<SalesSummary> summary() => _repository.summary();
 

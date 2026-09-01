@@ -135,4 +135,36 @@ class HttpSaleRepository implements SaleRepository {
       throw SaleException(message ?? 'No se pudo obtener las ventas del período');
     }
   }
+
+  @override
+  Future<({List<Sale> records, int total})> salesPage({
+    required DateTime from,
+    required DateTime to,
+    required int limit,
+    required int offset,
+  }) async {
+    try {
+      final res = await _dio.get<Map<String, dynamic>>(
+        '/sales',
+        queryParameters: {
+          'from': _fmtDate(from),
+          'to': _fmtDate(to),
+          'limit': limit.toString(),
+          'offset': offset.toString(),
+        },
+      );
+      final data = res.data!;
+      final records = (data['sales'] as List)
+          .cast<Map<String, dynamic>>()
+          .map(Sale.fromJson)
+          .toList();
+      final total = (data['salesTotal'] as num?)?.toInt() ?? 0;
+      return (records: records, total: total);
+    } on DioException catch (e) {
+      final data = e.response?.data;
+      final message = data is Map ? data['error']?.toString() : null;
+      throw SaleException(
+          message ?? 'No se pudo obtener las ventas paginadas');
+    }
+  }
 }

@@ -118,7 +118,8 @@ class PostgresSalesRepository implements SalesRepository {
   Future<List<SaleRecord>> listByRange({
     required DateTime from,
     required DateTime to,
-    int limit = 1000,
+    int limit = 20,
+    int offset = 0,
   }) async {
     // Compare against DATE LITERALS ('YYYY-MM-DD'), not timestamptz params, so
     // the range is unambiguous. `created_at::date` uses the DB session timezone
@@ -145,9 +146,14 @@ class PostgresSalesRepository implements SalesRepository {
         LEFT JOIN products p ON p.id = s.product_id
         WHERE s.created_at::date BETWEEN @from::date AND @to::date
         ORDER BY s.created_at DESC
-        LIMIT @limit
+        LIMIT @limit OFFSET @offset
       '''),
-      parameters: {'from': ymd(from), 'to': ymd(to), 'limit': limit},
+      parameters: {
+        'from': ymd(from),
+        'to': ymd(to),
+        'limit': limit,
+        'offset': offset,
+      },
     );
 
     return result
@@ -168,6 +174,26 @@ class PostgresSalesRepository implements SalesRepository {
           ),
         )
         .toList();
+  }
+
+  @override
+  Future<int> countByRange({
+    required DateTime from,
+    required DateTime to,
+  }) async {
+    String ymd(DateTime d) => '${d.year.toString().padLeft(4, '0')}-'
+        '${d.month.toString().padLeft(2, '0')}-'
+        '${d.day.toString().padLeft(2, '0')}';
+
+    final result = await _db.execute(
+      Sql.named('''
+        SELECT count(*)::int
+        FROM sales s
+        WHERE s.created_at::date BETWEEN @from::date AND @to::date
+      '''),
+      parameters: {'from': ymd(from), 'to': ymd(to)},
+    );
+    return result.first[0]! as int;
   }
 
   @override

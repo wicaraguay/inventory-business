@@ -54,6 +54,15 @@ class _FakeSaleRepository implements SaleRepository {
 
   @override
   Future<List<Sale>> recordsInRange(DateTime from, DateTime to) async => [];
+
+  @override
+  Future<({List<Sale> records, int total})> salesPage({
+    required DateTime from,
+    required DateTime to,
+    required int limit,
+    required int offset,
+  }) async =>
+      (records: <Sale>[], total: 0);
 }
 
 // ---------------------------------------------------------------------------

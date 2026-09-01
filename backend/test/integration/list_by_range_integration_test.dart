@@ -25,7 +25,7 @@ void main() {
   late Connection db;
   late PostgresSalesRepository salesRepo;
 
-  const marks = ['LBR-day13', 'LBR-day14', 'LBR-day20'];
+  const marks = ['LBR-day13', 'LBR-day14', 'LBR-day20', 'LBR-pag'];
 
   Future<void> cleanup() async {
     await db.execute(
@@ -66,6 +66,18 @@ void main() {
         createdAt: DateTime.utc(2025, 6, 20, 12),
       ),
     ]);
+    // Three sales on ONE unique day (2025-07-05) for pagination tests.
+    for (var i = 0; i < 3; i++) {
+      await salesRepo.register([
+        SaleItem(
+          quantity: 1,
+          unitPrice: 5,
+          total: 5,
+          description: 'LBR-pag',
+          createdAt: DateTime.utc(2025, 7, 5, 12).add(Duration(minutes: i)),
+        ),
+      ]);
+    }
   });
 
   tearDownAll(() async {
@@ -93,6 +105,34 @@ void main() {
       final mine = rows.where((r) => marks.contains(r.description)).toList();
       expect(mine.length, 1);
       expect(mine.first.description, 'LBR-day14');
+    });
+
+    test('paginación: limit/offset y countByRange', () async {
+      final day = DateTime.utc(2025, 7, 5);
+
+      final total = await salesRepo.countByRange(from: day, to: day);
+      expect(total, 3);
+
+      final page1 = await salesRepo.listByRange(
+        from: day,
+        to: day,
+        limit: 2,
+        offset: 0,
+      );
+      expect(page1.length, 2);
+
+      final page2 = await salesRepo.listByRange(
+        from: day,
+        to: day,
+        limit: 2,
+        offset: 2,
+      );
+      expect(page2.length, 1);
+
+      // No overlap between pages.
+      final ids1 = page1.map((r) => r.id).toSet();
+      final ids2 = page2.map((r) => r.id).toSet();
+      expect(ids1.intersection(ids2), isEmpty);
     });
   });
 }

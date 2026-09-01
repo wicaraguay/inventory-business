@@ -54,6 +54,16 @@ class _FakeSaleRepository implements SaleRepository {
   @override
   Future<List<Sale>> recordsInRange(DateTime from, DateTime to) async =>
       _records;
+
+  @override
+  Future<({List<Sale> records, int total})> salesPage({
+    required DateTime from,
+    required DateTime to,
+    required int limit,
+    required int offset,
+  }) async {
+    return (records: _records, total: _records.length);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -115,51 +125,105 @@ Future<void> _pumpSalesScreen(
 }
 
 // ---------------------------------------------------------------------------
-// Tests
+// Tests — month navigator
 // ---------------------------------------------------------------------------
 
 void main() {
-  group('SalesScreen — filtro Desde–Hasta', () {
-    testWidgets('muestra las ventas del rango en la tabla', (tester) async {
+  group('SalesScreen — navegador de mes', () {
+    testWidgets('muestra el mes actual en el navegador', (tester) async {
       await _pumpSalesScreen(tester, records: _fakeSales);
 
-      // Both product names should appear in the table.
+      final now = DateTime.now();
+      const months = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+      ];
+      final expectedLabel = '${months[now.month - 1]} ${now.year}';
+      expect(find.text(expectedLabel), findsOneWidget);
+    });
+
+    testWidgets('la flecha › está deshabilitada en el mes actual',
+        (tester) async {
+      await _pumpSalesScreen(tester, records: _fakeSales);
+
+      // Find the month-next button by key and confirm onPressed is null.
+      final nextBtn = tester.widget<IconButton>(
+        find.byKey(const Key('month-next')),
+      );
+      expect(nextBtn.onPressed, isNull,
+          reason: 'El botón › debe estar deshabilitado en el mes actual');
+    });
+
+    testWidgets('al tocar ‹ cambia al mes anterior', (tester) async {
+      await _pumpSalesScreen(tester, records: _fakeSales);
+
+      final now = DateTime.now();
+      final prevMonth = DateTime(now.year, now.month - 1, 1);
+      const months = [
+        'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+        'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+      ];
+      final expectedLabel = '${months[prevMonth.month - 1]} ${prevMonth.year}';
+
+      await tester.tap(find.byKey(const Key('month-prev')));
+      await tester.pumpAndSettle();
+
+      expect(find.text(expectedLabel), findsOneWidget);
+    });
+
+    testWidgets('al volver al mes actual › se deshabilita de nuevo',
+        (tester) async {
+      await _pumpSalesScreen(tester, records: _fakeSales);
+
+      // Go to prev month.
+      await tester.tap(find.byKey(const Key('month-prev')));
+      await tester.pumpAndSettle();
+
+      // › should now be enabled (not current month).
+      final nextBtnAfterPrev = tester.widget<IconButton>(
+        find.byKey(const Key('month-next')),
+      );
+      expect(nextBtnAfterPrev.onPressed, isNotNull,
+          reason: 'El › debe estar habilitado en el mes anterior');
+
+      // Go forward again → back to current month.
+      await tester.tap(find.byKey(const Key('month-next')));
+      await tester.pumpAndSettle();
+
+      final nextBtnCurrent = tester.widget<IconButton>(
+        find.byKey(const Key('month-next')),
+      );
+      expect(nextBtnCurrent.onPressed, isNull,
+          reason: 'El › debe volver a deshabilitarse al estar en el mes actual');
+    });
+
+    testWidgets('muestra las ventas del mes en la tabla', (tester) async {
+      await _pumpSalesScreen(tester, records: _fakeSales);
+
       expect(find.textContaining('Botín de cuero'), findsOneWidget);
       expect(find.textContaining('Zapatilla blanca'), findsOneWidget);
     });
 
-    testWidgets('muestra el resumen de período con cantidad y total correcto',
-        (tester) async {
+    testWidgets('muestra el total de ventas del mes', (tester) async {
       await _pumpSalesScreen(tester, records: _fakeSales);
 
-      // Active sales: 2, total: $280.00
-      expect(find.textContaining('2 ventas'), findsOneWidget);
-      expect(find.textContaining('\$280.00'), findsOneWidget);
+      // The summary shows "2 ventas en el mes" (total from backend = 2).
+      expect(find.textContaining('2 ventas en el mes'), findsOneWidget);
     });
 
     testWidgets('muestra las métricas globales del salesReportProvider',
         (tester) async {
       await _pumpSalesScreen(tester, records: _fakeSales);
 
-      // MetricCard renders labels uppercased.
       expect(find.text('VENDIDO HOY'), findsOneWidget);
       expect(find.text('TOTAL GENERAL'), findsOneWidget);
     });
 
-    testWidgets('muestra un solo chip compacto de rango de fechas',
-        (tester) async {
-      await _pumpSalesScreen(tester, records: _fakeSales);
-
-      // Un único control (chip) con el ícono de rango, en vez de dos botones.
-      expect(find.byType(ActionChip), findsOneWidget);
-      expect(find.byIcon(Icons.date_range), findsOneWidget);
-    });
-
-    testWidgets('muestra empty state cuando el rango no tiene ventas',
+    testWidgets('muestra empty state cuando el mes no tiene ventas',
         (tester) async {
       await _pumpSalesScreen(tester, records: []);
 
-      expect(find.text('No hay ventas en este período'), findsOneWidget);
+      expect(find.text('No hay ventas en este mes'), findsOneWidget);
     });
 
     testWidgets('el botón Nueva venta está presente', (tester) async {
@@ -170,11 +234,41 @@ void main() {
   });
 
   // -------------------------------------------------------------------------
-  // Unit test: salesInRangeProvider delegates to recordsInRange
+  // Tests — paginación
   // -------------------------------------------------------------------------
 
-  group('salesInRangeProvider — unit', () {
-    test('retorna los registros provistos por el repositorio', () async {
+  group('SalesScreen — paginación', () {
+    testWidgets('con total <= pageSize, Anterior y Siguiente deshabilitados',
+        (tester) async {
+      // 2 ventas < 20 → sola página
+      await _pumpSalesScreen(tester, records: _fakeSales);
+
+      // "Página 1 de 1"
+      expect(find.textContaining('Página 1 de 1'), findsOneWidget);
+
+      // Anterior disabled (page == 0) — located by key.
+      final anteriorBtn = tester.widget<TextButton>(
+        find.byKey(const Key('page-prev')),
+      );
+      expect(anteriorBtn.onPressed, isNull,
+          reason: 'Anterior debe estar deshabilitado en la primera página');
+
+      // Siguiente disabled (page+1 >= totalPages = 1) — located by key.
+      final siguienteBtn = tester.widget<TextButton>(
+        find.byKey(const Key('page-next')),
+      );
+      expect(siguienteBtn.onPressed, isNull,
+          reason: 'Siguiente debe estar deshabilitado cuando hay una sola página');
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // Unit test: salesPageProvider delegates to salesPage
+  // -------------------------------------------------------------------------
+
+  group('salesPageProvider — unit', () {
+    test('retorna los registros y el total provistos por el repositorio',
+        () async {
       final container = ProviderContainer(
         overrides: [
           saleRepositoryProvider
@@ -184,17 +278,20 @@ void main() {
       addTearDown(container.dispose);
 
       final from = DateTime(2026, 8, 1);
-      final to = DateTime(2026, 8, 2);
+      final to = DateTime(2026, 8, 31);
       final result = await container.read(
-        salesInRangeProvider((from: from, to: to)).future,
+        salesPageProvider(
+          (from: from, to: to, limit: 20, offset: 0),
+        ).future,
       );
 
-      expect(result.length, 2);
-      expect(result[0].productName, 'Botín de cuero');
-      expect(result[1].productName, 'Zapatilla blanca');
+      expect(result.records.length, 2);
+      expect(result.total, 2);
+      expect(result.records[0].productName, 'Botín de cuero');
+      expect(result.records[1].productName, 'Zapatilla blanca');
     });
 
-    test('rango sin ventas devuelve lista vacía', () async {
+    test('rango sin ventas devuelve lista vacía y total 0', () async {
       final container = ProviderContainer(
         overrides: [
           saleRepositoryProvider
@@ -204,12 +301,15 @@ void main() {
       addTearDown(container.dispose);
 
       final from = DateTime(2026, 8, 1);
-      final to = DateTime(2026, 8, 1);
+      final to = DateTime(2026, 8, 31);
       final result = await container.read(
-        salesInRangeProvider((from: from, to: to)).future,
+        salesPageProvider(
+          (from: from, to: to, limit: 20, offset: 0),
+        ).future,
       );
 
-      expect(result, isEmpty);
+      expect(result.records, isEmpty);
+      expect(result.total, 0);
     });
 
     test('la suma del total activo es correcta', () async {
@@ -222,15 +322,54 @@ void main() {
       addTearDown(container.dispose);
 
       final from = DateTime(2026, 8, 1);
-      final to = DateTime(2026, 8, 2);
+      final to = DateTime(2026, 8, 31);
       final result = await container.read(
-        salesInRangeProvider((from: from, to: to)).future,
+        salesPageProvider(
+          (from: from, to: to, limit: 20, offset: 0),
+        ).future,
       );
 
-      final total = result
+      final total = result.records
           .where((s) => !s.isVoided)
           .fold<double>(0, (sum, s) => sum + s.total);
       expect(total, 280.0); // 120 + 160
+    });
+
+    test('totalPages se calcula correctamente para más de una página',
+        () async {
+      // Build 25 fake sales → total=25, pageSize=20 → 2 pages.
+      final manySales = List.generate(
+        25,
+        (i) => Sale(
+          id: 's$i',
+          productName: 'Producto $i',
+          sku: 'SKU-$i',
+          quantity: 1,
+          unitPrice: 10,
+          total: 10,
+          createdAt: DateTime(2026, 8, 1),
+        ),
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          saleRepositoryProvider
+              .overrideWithValue(_FakeSaleRepository(records: manySales)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final from = DateTime(2026, 8, 1);
+      final to = DateTime(2026, 8, 31);
+      final result = await container.read(
+        salesPageProvider(
+          (from: from, to: to, limit: 20, offset: 0),
+        ).future,
+      );
+
+      // 25 / 20 = 1.25 → ceil → 2
+      final totalPages = (result.total / 20).ceil().clamp(1, 999999);
+      expect(totalPages, 2);
     });
   });
 }

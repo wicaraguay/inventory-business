@@ -41,4 +41,15 @@ abstract interface class SaleRepository {
 
   /// All sales (with void info) for a given date range.
   Future<List<Sale>> recordsInRange(DateTime from, DateTime to);
+
+  /// Paginated sales for a date range.
+  ///
+  /// Returns a record with the page of [records] and [total] (total number of
+  /// sales in the range, used to compute pagination).
+  Future<({List<Sale> records, int total})> salesPage({
+    required DateTime from,
+    required DateTime to,
+    required int limit,
+    required int offset,
+  });
 }
